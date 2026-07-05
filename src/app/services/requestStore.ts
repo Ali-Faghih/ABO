@@ -1,87 +1,89 @@
 import { canDonateTo } from "../lib/bloodCompatibility";
+import {
+  getRequests, getRequestById, getRequestsByHospital, getActiveRequests,
+  addRequest as dbAddRequest, updateRequest, cancelRequest as dbCancelRequest,
+  clearRequestDb,
+} from "../db/requests";
+import { getDonors, getDonorById, addDonorNotification, setDonorReadiness as dbSetReadiness } from "../db/donors";
+import { getHospitals, updateHospital } from "../db/hospitals";
 import type { BloodRequest, DonorReadiness } from "../types";
 
-const REQUESTS_KEY = "abo_requests";
-const READINESS_KEY = "abo_readiness";
-
-const VALID_STATUSES: ReadonlySet<string> = new Set(["active", "matched", "completed", "cancelled"]);
-const ALLOWED_STATUS_TRANSITIONS: Record<string, ReadonlySet<string>> = {
-  active: new Set(["matched", "cancelled"]),
-  matched: new Set(["completed", "cancelled"]),
-  completed: new Set([]),
-  cancelled: new Set([]),
-};
-
-function read<T>(key: string): T[] {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    localStorage.removeItem(key);
-    return [];
-  }
-}
-
-function write<T>(key: string, data: T[]): void {
-  localStorage.setItem(key, JSON.stringify(data));
-}
-
-// ─── Blood Requests ────────────────────────────────────────────────────────────
-
-export function getRequests(): BloodRequest[] {
-  return read<BloodRequest>(REQUESTS_KEY);
-}
-
-export function getRequestById(id: string): BloodRequest | null {
-  return getRequests().find((r) => r.id === id) ?? null;
-}
-
-export function getRequestsByHospital(hospitalId: string): BloodRequest[] {
-  return getRequests().filter((r) => r.hospitalId === hospitalId);
-}
-
-export function getActiveRequests(): BloodRequest[] {
-  return getRequests().filter((r) => r.status === "active" || r.status === "matched");
-}
-
+// ─── Wrapped: addRequest also notifies matching donors + updates hospital ─────
 export function addRequest(req: BloodRequest): boolean {
-  if (!req.id || !req.hospitalId || !req.bloodType || !req.units || !req.urgency) return false;
-  if (!VALID_STATUSES.has(req.status)) return false;
-  const all = getRequests();
-  if (all.some((r) => r.id === req.id)) return false;
-  all.push(req);
-  write(REQUESTS_KEY, all);
-  return true;
-}
+  const ok = dbAddRequest(req);
+  if (ok) {
+    // Update hospital's activeRequests count
+    const hosp = getHospitals().find((h) => h.hospitalId === req.hospitalId);
+    if (hosp) updateHospital(hosp.id, { activeRequests: hosp.activeRequests + 1 });
 
-export function updateRequest(id: string, updates: Partial<BloodRequest>): boolean {
-  const all = getRequests();
-  const idx = all.findIndex((r) => r.id === id);
-  if (idx < 0) return false;
-  const prev = all[idx];
-  if (updates.status && updates.status !== prev.status) {
-    const allowed = ALLOWED_STATUS_TRANSITIONS[prev.status];
-    if (!allowed || !allowed.has(updates.status)) return false;
+    // Notify all eligible donors in the same city
+    const donors = getDonors().filter((d) => d.city === req.city && d.eligible);
+    donors.forEach((d) => {
+      addDonorNotification(d.id, {
+        type: "request",
+        title: `درخواست جدید ${req.bloodType}`,
+        message: `یک درخواست جدید برای گروه خونی ${req.bloodType} در ${req.city} توسط ${req.hospitalName} ثبت شد.`,
+        time: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }),
+        read: false,
+      });
+    });
   }
-  all[idx] = { ...prev, ...updates };
-  write(REQUESTS_KEY, all);
-  return true;
+  return ok;
 }
 
 export function cancelRequest(id: string): boolean {
-  return updateRequest(id, { status: "cancelled" });
+  const req = getRequestById(id);
+  if (!req) return false;
+
+  // Notify donors who had appointments for this request
+  req.appointments.forEach((a) => {
+    addDonorNotification(a.donorId, {
+      type: "system",
+      title: "لغو درخواست",
+      message: `درخواست ${req.bloodType} توسط ${req.hospitalName} لغو شد.`,
+      time: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }),
+      read: false,
+    });
+  });
+
+  return dbCancelRequest(id);
 }
 
-// ─── Donor Readiness ───────────────────────────────────────────────────────────
+// ─── Re-export rest ────────────────────────────────────────────────────────────
+export { getRequests, getRequestById, getRequestsByHospital, getActiveRequests, updateRequest };
+
+export function clearRequestStore(): void {
+  clearRequestDb();
+}
+
+// ─── Donor Readiness (now in donors db, mapped here for backward compat) ──────
 
 export function getReadinessList(): DonorReadiness[] {
-  return read<DonorReadiness>(READINESS_KEY);
+  return getDonors()
+    .filter((d) => d.readinessAvailable)
+    .map((d) => ({
+      id: `READY-${d.id}`,
+      donorId: d.id,
+      donorName: `${d.firstName} ${d.lastName}`,
+      bloodType: d.bloodType,
+      city: d.city,
+      available: d.readinessAvailable,
+      readinessDate: d.readinessDate || "",
+    }));
 }
 
 export function getReadinessByDonor(donorId: string): DonorReadiness | null {
-  return getReadinessList().find((r) => r.donorId === donorId) ?? null;
+  const d = getDonorById(donorId);
+  if (!d || !d.readinessAvailable) return null;
+  return {
+    id: `READY-${d.id}`,
+    donorId: d.id,
+    donorName: `${d.firstName} ${d.lastName}`,
+    bloodType: d.bloodType,
+    city: d.city,
+    available: d.readinessAvailable,
+    readinessDate: d.readinessDate || "",
+  };
 }
 
 export function getAvailableDonors(bloodType?: string, city?: string): DonorReadiness[] {
@@ -94,42 +96,9 @@ export function getAvailableDonors(bloodType?: string, city?: string): DonorRead
 }
 
 export function setDonorReadiness(data: DonorReadiness): void {
-  const all = getReadinessList();
-  const idx = all.findIndex((r) => r.donorId === data.donorId);
-  if (idx >= 0) { all[idx] = data; }
-  else { all.push(data); }
-  write(READINESS_KEY, all);
+  dbSetReadiness(data.donorId, data.available);
 }
 
 export function removeDonorReadiness(donorId: string): void {
-  write(READINESS_KEY, getReadinessList().filter((r) => r.donorId !== donorId));
-}
-
-// ─── Seed Data ─────────────────────────────────────────────────────────────────
-
-function seed(): void {
-  if (read<BloodRequest>(REQUESTS_KEY).length > 0) return;
-
-  const now = new Date();
-  const toPersian = (d: Date) => d.toLocaleDateString("fa-IR");
-
-  const seedRequests: BloodRequest[] = [
-    { id: "REQ-001", hospitalId: "HOSP-001", hospitalName: "بیمارستان امام خمینی", bloodType: "O-", units: 2, urgency: "فوری", deadline: "۱۴۰۳/۰۴/۱۰", status: "active", matched: 1, city: "تهران", createdAt: toPersian(now) },
-    { id: "REQ-002", hospitalId: "HOSP-002", hospitalName: "بیمارستان شریعتی", bloodType: "A+", units: 1, urgency: "معمولی", deadline: "۱۴۰۳/۰۴/۱۵", status: "active", matched: 0, city: "تهران", createdAt: toPersian(now) },
-    { id: "REQ-003", hospitalId: "HOSP-003", hospitalName: "بیمارستان مهراد", bloodType: "B+", units: 3, urgency: "فوری", deadline: "۱۴۰۳/۰۴/۰۸", status: "active", matched: 2, city: "تهران", createdAt: toPersian(now) },
-    { id: "REQ-004", hospitalId: "HOSP-004", hospitalName: "سازمان انتقال خون", bloodType: "AB-", units: 1, urgency: "معمولی", deadline: "۱۴۰۳/۰۴/۲۰", status: "active", matched: 0, city: "تهران", createdAt: toPersian(now) },
-    { id: "REQ-005", hospitalId: "HOSP-005", hospitalName: "بیمارستان توس", bloodType: "A-", units: 2, urgency: "معمولی", deadline: "۱۴۰۳/۰۴/۲۵", status: "active", matched: 0, city: "مشهد", createdAt: toPersian(now) },
-    { id: "REQ-006", hospitalId: "HOSP-001", hospitalName: "بیمارستان امام خمینی", bloodType: "AB+", units: 3, urgency: "معمولی", deadline: "۱۴۰۳/۰۳/۲۸", status: "completed", matched: 3, city: "تهران", createdAt: "۲۸ خرداد ۱۴۰۳" },
-  ];
-
-  write(REQUESTS_KEY, seedRequests);
-}
-
-seed();
-
-// ─── Data Cleanup ─────────────────────────────────────────────────────────────
-
-export function clearRequestStore(): void {
-  localStorage.removeItem(REQUESTS_KEY);
-  localStorage.removeItem(READINESS_KEY);
+  dbSetReadiness(donorId, false);
 }
