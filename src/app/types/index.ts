@@ -1,7 +1,7 @@
 export type Tab = "home" | "chat" | "add" | "magazine" | "profile";
 export type UserType = "donor" | "hospital";
 export type AppScreen = "welcome" | "login" | "register-donor" | "register-hospital" | "main";
-export type SubScreen = "none" | "chat-detail" | "article-detail" | "city-select" | "registry" | "book-appointment" | "my-appointments" | "hospital-appointments" | "notifications" | "volunteers-list" | "edit-request";
+export type SubScreen = "none" | "chat-detail" | "article-detail" | "city-select" | "registry" | "book-appointment" | "my-appointments" | "hospital-appointments" | "notifications" | "volunteers-list" | "edit-request" | "donor-invitations" | "send-invitation";
 
 export interface DonorProfile {
   type: "donor";
@@ -165,7 +165,7 @@ export interface ChatMessage {
 }
 
 // ─── Appointment Types ─────────────────────────────────────────────────────────
-export type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled";
+export type AppointmentStatus = "pending" | "invited" | "confirmed" | "completed" | "cancelled";
 
 export interface Appointment {
   id: string;
@@ -179,6 +179,7 @@ export interface Appointment {
   time: string;
   status: AppointmentStatus;
   createdAt: string;
+  initiator?: string;
 }
 
 // ─── Notification Types (now embedded in Donor DB) ────────────────────────────
