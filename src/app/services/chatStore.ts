@@ -1,104 +1,73 @@
-import { getChats, getChatById, getChatsForUser, getChatByRequestAndParticipants, getChatsByRequest, addChat, updateChat, addChatMessage, getChatMessages, clearChatDb } from "../db/chats";
+import { api } from "./api";
 import type { ChatConversation, ChatMessage } from "../types";
 
-// ─── Re-export db functions as-is ──────────────────────────────────────────────
-export { getChats, getChatById, getChatsForUser, getChatByRequestAndParticipants, getChatsByRequest, addChat, addChatMessage, getChatMessages };
-
-export function getConversations(): ChatConversation[] {
-  return getChats().map((c) => ({
-    id: c.id,
-    participants: c.participants,
-    hospitalId: c.hospitalId,
-    hospitalName: c.hospitalName,
-    donorId: c.donorId,
-    donorName: c.donorName,
-    requestId: c.requestId,
-    lastMessage: c.lastMessage,
-    lastMessageTime: c.lastMessageTime,
-    unread: c.unread,
-  }));
-}
-
-export function getConversationsForUser(userId: string): ChatConversation[] {
-  return getChatsForUser(userId).map((c) => ({
-    id: c.id,
-    participants: c.participants,
-    hospitalId: c.hospitalId,
-    hospitalName: c.hospitalName,
-    donorId: c.donorId,
-    donorName: c.donorName,
-    requestId: c.requestId,
-    lastMessage: c.lastMessage,
-    lastMessageTime: c.lastMessageTime,
-    unread: c.unread,
-  }));
-}
-
-export function getConversationById(id: string): ChatConversation | null {
-  const c = getChatById(id);
-  if (!c) return null;
+function mapConv(c: any): ChatConversation {
   return {
     id: c.id,
-    participants: c.participants,
+    participants: c.participants || [],
     hospitalId: c.hospitalId,
-    hospitalName: c.hospitalName,
+    hospitalName: c.hospitalName || "",
     donorId: c.donorId,
-    donorName: c.donorName,
-    requestId: c.requestId,
-    lastMessage: c.lastMessage,
-    lastMessageTime: c.lastMessageTime,
-    unread: c.unread,
+    donorName: c.donorName || "",
+    requestId: c.requestId || "",
+    lastMessage: c.lastMessage || "",
+    lastMessageTime: c.lastMessageTime || "",
+    unread: c.unread || 0,
   };
 }
 
-export function getConversationByRequestAndParticipants(requestId: string, donorId: string, hospitalId: string): ChatConversation | null {
-  const c = getChatByRequestAndParticipants(requestId, donorId, hospitalId);
-  if (!c) return null;
-  return {
-    id: c.id,
-    participants: c.participants,
-    hospitalId: c.hospitalId,
-    hospitalName: c.hospitalName,
-    donorId: c.donorId,
-    donorName: c.donorName,
-    requestId: c.requestId,
-    lastMessage: c.lastMessage,
-    lastMessageTime: c.lastMessageTime,
-    unread: c.unread,
-  };
+export async function getConversations(): Promise<ChatConversation[]> {
+  const convs = await api<any[]>("GET", "/chats");
+  return convs.map(mapConv);
 }
 
-export function getConversationsByRequest(requestId: string): ChatConversation[] {
-  return getChatsByRequest(requestId).map((c) => ({
-    id: c.id,
-    participants: c.participants,
-    hospitalId: c.hospitalId,
-    hospitalName: c.hospitalName,
-    donorId: c.donorId,
-    donorName: c.donorName,
-    requestId: c.requestId,
-    lastMessage: c.lastMessage,
-    lastMessageTime: c.lastMessageTime,
-    unread: c.unread,
-  }));
+export async function getConversationsForUser(userId: string): Promise<ChatConversation[]> {
+  const convs = await api<any[]>("GET", `/chats/user/${userId}`);
+  return convs.map(mapConv);
 }
 
-export function addConversation(conv: ChatConversation): void {
-  addChat({ ...conv, messages: [] });
+export async function getConversationById(id: string): Promise<ChatConversation | null> {
+  try {
+    const c = await api<any>("GET", `/chats/${id}`);
+    return mapConv(c);
+  } catch {
+    return null;
+  }
 }
 
-export function updateConversation(id: string, updates: Partial<ChatConversation>): void {
-  updateChat(id, updates);
+export async function getConversationByRequestAndParticipants(
+  requestId: string, donorId: string, hospitalId: string
+): Promise<ChatConversation | null> {
+  const convs = await getConversations();
+  return convs.find((c) => c.requestId === requestId && c.donorId === donorId && c.hospitalId === hospitalId) || null;
 }
 
-export function getMessages(conversationId: string): ChatMessage[] {
-  return getChatMessages(conversationId);
+export async function getConversationsByRequest(requestId: string): Promise<ChatConversation[]> {
+  const convs = await getConversations();
+  return convs.filter((c) => c.requestId === requestId);
 }
 
-export function addMessage(msg: ChatMessage): void {
-  addChatMessage(msg.conversationId, msg);
+export async function addConversation(conv: ChatConversation): Promise<void> {
+  await api("POST", "/chats", {
+    hospitalId: conv.hospitalId,
+    donorId: conv.donorId,
+    requestId: conv.requestId,
+  });
 }
 
-export function clearChatStore(): void {
-  clearChatDb();
+export async function updateConversation(id: string, updates: Partial<ChatConversation>): Promise<void> {
+  if (updates.unread !== undefined) {
+    await api("PUT", `/chats/${id}/read`);
+  }
+}
+
+export async function getMessages(conversationId: string): Promise<ChatMessage[]> {
+  return api<ChatMessage[]>("GET", `/chats/${conversationId}/messages`);
+}
+
+export async function addMessage(msg: ChatMessage): Promise<void> {
+  await api("POST", `/chats/${msg.conversationId}/messages`, {
+    senderId: msg.senderId,
+    text: msg.text,
+  });
 }

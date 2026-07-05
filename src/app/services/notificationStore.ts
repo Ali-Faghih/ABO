@@ -1,19 +1,29 @@
-import type { DonorProfile, DonorNotification } from "../types";
-import { getDonorNotifications, getUnreadNotifCount, markAllNotifsRead, addDonorNotification } from "../db/donors";
+import { api } from "./api";
+import type { DonorNotification } from "../types";
 
-// ─── Backward compat type alias ────────────────────────────────────────────────
 export type AppNotification = DonorNotification;
 
-// ─── Re-exports (backward compat) ──────────────────────────────────────────────
-export { getDonorNotifications as getNotifications, getUnreadNotifCount as getUnreadCount, markAllNotifsRead as markAllAsRead, addDonorNotification as addNotification };
+export async function getNotifications(userId: string): Promise<DonorNotification[]> {
+  const notifs = await api<any[]>("GET", `/donors/${userId}/notifications`);
+  return notifs.map((n) => ({
+    ...n,
+    read: !!n.read,
+  }));
+}
 
-export function seedDonorNotifications(donor: DonorProfile): void {
-  const existing = getDonorNotifications(donor.id);
-  if (existing.length > 0) return;
+export async function getUnreadCount(userId: string): Promise<number> {
+  const notifs = await getNotifications(userId);
+  return notifs.filter((n) => !n.read).length;
+}
 
-  addDonorNotification(donor.id, { type: "appointment", title: "نوبت تأیید شد", message: "نوبت اهدای خون شما در بیمارستان امام خمینی برای فردا ساعت ۹ تأیید شد.", time: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }), read: false });
-  addDonorNotification(donor.id, { type: "reminder", title: "یادآوری نوبت", message: "فردا نوبت اهدای خون دارید. لطفاً شب قبل استراحت کافی داشته باشید.", time: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }), read: false });
-  addDonorNotification(donor.id, { type: "system", title: "آمادگی اهدا", message: "وضعیت اهدای شما به‌روز شد. هم‌اکنون آماده اهدا هستید.", time: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }), read: false });
-  addDonorNotification(donor.id, { type: "request", title: "درخواست جدید", message: "یک درخواست جدید برای گروه خونی O+ در شهر شما ثبت شده است.", time: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }), read: true });
-  addDonorNotification(donor.id, { type: "reminder", title: "تغذیه مناسب", message: "برای اهدای خون سالم، مصرف مواد غذایی حاوی آهن را فراموش نکنید.", time: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }), read: true });
+export async function markAllAsRead(userId: string): Promise<void> {
+  await api("PUT", `/donors/${userId}/notifications/read-all`);
+}
+
+export async function addNotification(userId: string, notif: Partial<DonorNotification>): Promise<void> {
+  await api("POST", `/donors/${userId}/notifications`, notif);
+}
+
+export async function seedDonorNotifications(_donor: any): Promise<void> {
+  // Notifications are already seeded on the backend for demo accounts
 }

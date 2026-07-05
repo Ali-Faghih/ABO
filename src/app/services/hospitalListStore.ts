@@ -1,12 +1,18 @@
-import { getListedHospitalIds, isHospitalListed, setHospitalListed } from "../db/hospitals";
+import { api } from "./api";
 
-// ─── Re-exports (backward compat) ──────────────────────────────────────────────
-export { getListedHospitalIds, isHospitalListed };
-
-export function addToListed(hospitalId: string): void {
-  setHospitalListed(hospitalId, true);
+export async function getListedHospitalIds(): Promise<string[]> {
+  return api<string[]>("GET", "/hospitals/listed/ids");
 }
 
-export function removeFromListed(hospitalId: string): void {
-  setHospitalListed(hospitalId, false);
+export async function isHospitalListed(hospitalId: string): Promise<boolean> {
+  const ids = await getListedHospitalIds();
+  return ids.includes(hospitalId);
+}
+
+export async function addToListed(hospitalUserId: string): Promise<void> {
+  await api("PUT", `/hospitals/${hospitalUserId}/listing`, { listed: true });
+}
+
+export async function removeFromListed(hospitalUserId: string): Promise<void> {
+  await api("PUT", `/hospitals/${hospitalUserId}/listing`, { listed: false });
 }

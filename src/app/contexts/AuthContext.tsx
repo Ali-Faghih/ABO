@@ -15,7 +15,10 @@ import {
   saveUser,
   setSession,
   usernameExists,
+  registerDonor as authRegisterDonor,
+  registerHospital as authRegisterHospital,
 } from "../services/authStorage";
+import { api } from "../services/api";
 
 interface AuthContextValue {
   user: UserProfile | null;
@@ -23,66 +26,15 @@ interface AuthContextValue {
   isGuest: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string, type: UserType) => { success: boolean; error?: string };
+  login: (username: string, password: string, type: UserType) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   enterGuestMode: () => void;
-  registerDonor: (data: DonorRegistrationData) => { success: boolean; error?: string };
-  registerHospital: (data: HospitalRegistrationData) => { success: boolean; error?: string };
-  updateProfile: (updates: Partial<UserProfile>) => void;
+  registerDonor: (data: DonorRegistrationData) => Promise<{ success: boolean; error?: string }>;
+  registerHospital: (data: HospitalRegistrationData) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-function createDonorProfile(data: DonorRegistrationData): DonorProfile {
-  const today = new Date().toLocaleDateString("fa-IR");
-  return {
-    type: "donor",
-    id: crypto.randomUUID(),
-    username: data.nationalId.trim(),
-    password: data.password,
-    name: `${data.firstName} ${data.lastName}`,
-    firstName: data.firstName,
-    lastName: data.lastName,
-    bloodType: data.bloodType,
-    city: data.city,
-    province: data.province,
-    phone: data.phone,
-    address: data.address,
-    weight: data.weight,
-    height: data.height,
-    eligible: true,
-    joinDate: today,
-    donations: 0,
-    gender: data.gender,
-    diseaseName: data.diseaseName,
-    medicationName: data.medicationName,
-  };
-}
-
-function createHospitalProfile(data: HospitalRegistrationData): HospitalProfile {
-  return {
-    type: "hospital",
-    id: crypto.randomUUID(),
-    username: data.hospitalId.trim(),
-    password: data.password,
-    name: data.name,
-    hospitalType: data.hospitalType,
-    city: data.city,
-    province: data.province,
-    address: data.address,
-    phone: data.phone,
-    licenseNumber: data.licenseNumber,
-    managerFirstName: data.managerFirstName,
-    managerLastName: data.managerLastName,
-    managerNationalId: data.managerNationalId,
-    managerPosition: data.managerPosition,
-    managerPhone: data.managerPhone,
-    activeRequests: 0,
-    totalDonors: 0,
-    totalDonations: 0,
-    rating: 0,
-  };
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -92,29 +44,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const userId = getSessionUserId();
     if (userId) {
-      const stored = getUserById(userId);
-      if (stored) {
-        setUser(stored);
-        setIsGuest(false);
-      } else {
-        clearSession();
-      }
+      getUserById(userId).then((stored) => {
+        if (stored) {
+          setUser(stored);
+          setIsGuest(false);
+        } else {
+          clearSession();
+        }
+        setIsLoading(false);
+      });
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
-  const persistUser = useCallback((profile: UserProfile) => {
-    saveUser(profile);
+  const persistUser = useCallback(async (profile: UserProfile) => {
+    await saveUser(profile);
     setSession(profile.id);
     setUser(profile);
     setIsGuest(false);
   }, []);
 
-  const login = useCallback((username: string, password: string, type: UserType) => {
+  const login = useCallback(async (username: string, password: string, type: UserType) => {
     if (!username.trim() || !password) {
       return { success: false, error: "لطفاً نام کاربری و رمز عبور را وارد کنید." };
     }
-    const found = findUser(username, password, type);
+    const found = await findUser(username, password, type);
     if (!found) {
       return { success: false, error: "اطلاعات ورود نادرست است یا حسابی با این مشخصات وجود ندارد." };
     }
@@ -125,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    api("POST", "/auth/logout").catch(() => {});
     clearSession();
     setUser(null);
     setIsGuest(false);
@@ -136,23 +92,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsGuest(true);
   }, []);
 
-  const registerDonor = useCallback((data: DonorRegistrationData) => {
-    if (usernameExists(data.nationalId)) {
+  const registerDonor = useCallback(async (data: DonorRegistrationData) => {
+    const exists = await usernameExists(data.nationalId);
+    if (exists) {
       return { success: false, error: "این کد ملی قبلاً ثبت شده است." };
     }
-    persistUser(createDonorProfile(data));
-    return { success: true };
-  }, [persistUser]);
+    const result = await authRegisterDonor(data);
+    if (!result.success) return result;
+    const profile = await login(data.nationalId, data.password, "donor");
+    return profile;
+  }, [login]);
 
-  const registerHospital = useCallback((data: HospitalRegistrationData) => {
-    if (usernameExists(data.hospitalId)) {
+  const registerHospital = useCallback(async (data: HospitalRegistrationData) => {
+    const exists = await usernameExists(data.hospitalId);
+    if (exists) {
       return { success: false, error: "این کد بیمارستان قبلاً ثبت شده است." };
     }
-    persistUser(createHospitalProfile(data));
-    return { success: true };
-  }, [persistUser]);
+    const result = await authRegisterHospital(data);
+    if (!result.success) return result;
+    const profile = await login(data.hospitalId, data.password, "hospital");
+    return profile;
+  }, [login]);
 
-  const updateProfile = useCallback((updates: Partial<UserProfile>) => {
+  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     setUser((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, ...updates } as UserProfile;

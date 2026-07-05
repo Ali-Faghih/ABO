@@ -1,15 +1,16 @@
-import type { UserProfile, HospitalProfile, DonorProfile, DonorRegistrationData, HospitalRegistrationData } from "../types";
-import { getDonorByNationalId, findDonorUser, donorUsernameExists, addDonor, getDonorById, getDonors, updateDonor } from "../db/donors";
-import { getHospitalByHospitalId, findHospitalUser, hospitalUsernameExists, addHospital, getHospitalById, getHospitals, updateHospital } from "../db/hospitals";
+import { api, getToken, setToken, clearToken, getSessionUserId, setSession, clearSession } from "./api";
+import type { UserProfile, DonorProfile, HospitalProfile, DonorRegistrationData, HospitalRegistrationData } from "../types";
 
-const SESSION_KEY = "abo_session";
+const PASSWORD_KEY = "abo_pw";
 
-function donorToProfile(d: import("../db/donors").DbDonor): DonorProfile {
+export { getSessionUserId, setSession, clearSession };
+
+function donorApiToProfile(d: any, username: string, password: string): DonorProfile {
   return {
     type: "donor",
-    id: d.id,
-    username: d.nationalId,
-    password: d.password,
+    id: d.userId,
+    username,
+    password,
     name: `${d.firstName} ${d.lastName}`,
     firstName: d.firstName,
     lastName: d.lastName,
@@ -20,23 +21,23 @@ function donorToProfile(d: import("../db/donors").DbDonor): DonorProfile {
     address: d.address,
     weight: d.weight || undefined,
     height: d.height || undefined,
-    eligible: d.eligible,
+    eligible: !!d.eligible,
     nextEligible: d.nextEligible || undefined,
     lastDonation: d.lastDonation || undefined,
     joinDate: d.joinDate,
-    donations: d.donations,
-    gender: d.gender,
+    donations: d.donations || 0,
+    gender: d.gender || "male",
     diseaseName: d.diseaseName || undefined,
     medicationName: d.medicationName || undefined,
   };
 }
 
-function hospitalToProfile(h: import("../db/hospitals").DbHospital): HospitalProfile {
+function hospitalApiToProfile(h: any, username: string, password: string): HospitalProfile {
   return {
     type: "hospital",
-    id: h.id,
-    username: h.hospitalId,
-    password: h.password,
+    id: h.userId,
+    username,
+    password,
     name: h.name,
     hospitalType: h.hospitalType,
     city: h.city,
@@ -49,161 +50,126 @@ function hospitalToProfile(h: import("../db/hospitals").DbHospital): HospitalPro
     managerNationalId: h.managerNationalId,
     managerPosition: h.managerPosition,
     managerPhone: h.managerPhone,
-    activeRequests: h.activeRequests,
-    totalDonors: h.totalDonors,
-    totalDonations: h.totalDonations,
-    rating: h.rating,
+    activeRequests: h.activeRequests || 0,
+    totalDonors: h.totalDonors || 0,
+    totalDonations: h.totalDonations || 0,
+    rating: h.rating || 0,
     beds: h.beds || undefined,
     founded: h.founded || undefined,
   };
 }
 
-export function findUser(username: string, password: string, type: UserProfile["type"]): UserProfile | null {
-  if (type === "donor") {
-    const d = findDonorUser(username, password);
-    return d ? donorToProfile(d) : null;
-  }
-  const h = findHospitalUser(username, password);
-  return h ? hospitalToProfile(h) : null;
-}
-
-export function saveUser(user: UserProfile): void {
-  if (user.type === "donor") {
-    const existing = getDonorById(user.id);
-    if (existing) {
-      updateDonor(user.id, {
-        password: user.password,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-        city: user.city,
-        province: user.province,
-        address: user.address,
-        weight: user.weight || 0,
-        height: user.height || 0,
-        bloodType: user.bloodType,
-        eligible: user.eligible,
-        nextEligible: user.nextEligible || null,
-        lastDonation: user.lastDonation || null,
-        donations: user.donations,
-        gender: user.gender,
-        diseaseName: user.diseaseName || "",
-        medicationName: user.medicationName || "",
-      });
-    } else {
-      const d = {
-        id: user.id,
-        nationalId: user.username,
-        password: user.password,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-        birthDate: "",
-        gender: user.gender,
-        city: user.city,
-        province: user.province,
-        address: user.address,
-        weight: user.weight || 0,
-        height: user.height || 0,
-        bloodType: user.bloodType,
-        diseaseName: user.diseaseName || "",
-        medicationName: user.medicationName || "",
-        readinessAvailable: false,
-        readinessDate: null,
-        eligible: user.eligible,
-        nextEligible: user.nextEligible || null,
-        lastDonation: user.lastDonation || null,
-        joinDate: user.joinDate,
-        donations: user.donations,
-        notifications: [],
-      };
-      addDonor({ nationalId: d.nationalId, phone: d.phone, firstName: d.firstName, lastName: d.lastName, province: d.province, city: d.city, address: d.address, bloodType: d.bloodType, weight: d.weight, height: d.height, gender: d.gender, password: d.password }, user.id);
-    }
-  } else {
-    const existing = getHospitalById(user.id);
-    if (existing) {
-      updateHospital(user.id, {
-        password: user.password,
-        name: user.name,
-        hospitalType: user.hospitalType,
-        city: user.city,
-        province: user.province,
-        address: user.address,
-        phone: user.phone,
-        licenseNumber: user.licenseNumber,
-        managerFirstName: user.managerFirstName,
-        managerLastName: user.managerLastName,
-        managerNationalId: user.managerNationalId,
-        managerPosition: user.managerPosition,
-        managerPhone: user.managerPhone,
-        activeRequests: user.activeRequests,
-        totalDonors: user.totalDonors,
-        totalDonations: user.totalDonations,
-        rating: user.rating,
-        beds: user.beds || 0,
-        founded: user.founded || "",
-      });
-    }
-  }
-}
-
-export function getAllUsers(): UserProfile[] {
-  const donors = getDonors().map(donorToProfile);
-  const hospitals = getHospitals().map(hospitalToProfile);
-  return [...hospitals, ...donors];
-}
-
-export function findUserByUsername(username: string): UserProfile | null {
-  const d = getDonorByNationalId(username);
-  if (d) return donorToProfile(d);
-  const h = getHospitalByHospitalId(username);
-  if (h) return hospitalToProfile(h);
-  return null;
-}
-
-export function usernameExists(username: string): boolean {
-  return donorUsernameExists(username) || hospitalUsernameExists(username);
-}
-
-export function getSessionUserId(): string | null {
+export async function findUser(username: string, password: string, type: UserProfile["type"]): Promise<UserProfile | null> {
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const { userId } = JSON.parse(raw) as { userId: string };
-    return userId ?? null;
+    const { token, userId } = await api<{ token: string; userId: string; type: string }>("POST", "/auth/login", { username, password, type });
+    setToken(token);
+    setSession(userId);
+    localStorage.setItem(PASSWORD_KEY, password);
+    if (type === "donor") {
+      const d = await api<any>("GET", `/donors/${userId}`);
+      return donorApiToProfile(d, username, password);
+    }
+    const h = await api<any>("GET", `/hospitals/${userId}`);
+    return hospitalApiToProfile(h, username, password);
   } catch {
     return null;
   }
 }
 
-export function setSession(userId: string): void {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ userId }));
+export async function getUserById(id: string): Promise<UserProfile | null> {
+  try {
+    const pw = localStorage.getItem(PASSWORD_KEY) || "";
+    const d = await api<any>("GET", `/donors/${id}`).catch(() => null);
+    if (d) return donorApiToProfile(d, d.username || "", pw);
+    const h = await api<any>("GET", `/hospitals/${id}`).catch(() => null);
+    if (h) return hospitalApiToProfile(h, h.username || "", pw);
+    return null;
+  } catch {
+    return null;
+  }
 }
 
-export function clearSession(): void {
-  localStorage.removeItem(SESSION_KEY);
+export async function saveUser(user: UserProfile): Promise<void> {
+  if (user.type === "donor") {
+    await api("PUT", `/donors/${user.id}`, {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      city: user.city,
+      province: user.province,
+      address: user.address,
+      weight: user.weight,
+      height: user.height,
+      bloodType: user.bloodType,
+      eligible: user.eligible,
+      nextEligible: user.nextEligible || null,
+      lastDonation: user.lastDonation || null,
+      donations: user.donations,
+      gender: user.gender,
+      diseaseName: user.diseaseName || "",
+      medicationName: user.medicationName || "",
+    });
+  } else {
+    await api("PUT", `/hospitals/${user.id}`, {
+      name: user.name,
+      hospitalType: user.hospitalType,
+      city: user.city,
+      province: user.province,
+      address: user.address,
+      phone: user.phone,
+      licenseNumber: user.licenseNumber,
+      managerFirstName: user.managerFirstName,
+      managerLastName: user.managerLastName,
+      managerNationalId: user.managerNationalId,
+      managerPosition: user.managerPosition,
+      managerPhone: user.managerPhone,
+      activeRequests: user.activeRequests,
+      totalDonors: user.totalDonors,
+      totalDonations: user.totalDonations,
+      rating: user.rating,
+      beds: user.beds || 0,
+      founded: user.founded || "",
+    });
+  }
 }
 
-export function getUserById(id: string): UserProfile | null {
-  const d = getDonorById(id);
-  if (d) return donorToProfile(d);
-  const h = getHospitalById(id);
-  if (h) return hospitalToProfile(h);
-  return null;
+export async function findUserByUsername(username: string): Promise<UserProfile | null> {
+  try {
+    const { exists, userId, type } = await api<{ exists: boolean; userId: string; type: string }>("GET", `/auth/check/${encodeURIComponent(username)}`);
+    if (!exists) return null;
+    return getUserById(userId);
+  } catch {
+    return null;
+  }
 }
 
-export function registerDonor(data: DonorRegistrationData): { success: boolean; error?: string } {
-  if (donorUsernameExists(data.nationalId)) return { success: false, error: "این کد ملی قبلاً ثبت نام کرده است" };
-  const id = crypto.randomUUID?.() ?? `donor-${Date.now()}-${Math.random()}`;
-  const donor = addDonor(data, id);
-  if (!donor) return { success: false, error: "خطا در ثبت نام" };
-  return { success: true };
+export async function usernameExists(username: string): Promise<boolean> {
+  try {
+    const { exists } = await api<{ exists: boolean }>("GET", `/auth/check/${encodeURIComponent(username)}`);
+    return exists;
+  } catch {
+    return false;
+  }
 }
 
-export function registerHospital(data: HospitalRegistrationData): { success: boolean; error?: string } {
-  if (hospitalUsernameExists(data.hospitalId)) return { success: false, error: "این بیمارستان قبلاً ثبت نام کرده است" };
-  const id = crypto.randomUUID?.() ?? `hosp-${Date.now()}-${Math.random()}`;
-  const hospital = addHospital(data, id);
-  if (!hospital) return { success: false, error: "خطا در ثبت نام" };
-  return { success: true };
+export function getAllUsers(): UserProfile[] {
+  return [];
+}
+
+export async function registerDonor(data: DonorRegistrationData): Promise<{ success: boolean; error?: string }> {
+  try {
+    await api("POST", "/auth/register/donor", data);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message || "خطا در ثبت نام" };
+  }
+}
+
+export async function registerHospital(data: HospitalRegistrationData): Promise<{ success: boolean; error?: string }> {
+  try {
+    await api("POST", "/auth/register/hospital", data);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message || "خطا در ثبت نام" };
+  }
 }
