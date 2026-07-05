@@ -3,7 +3,7 @@ import { StatusBar } from "../components/ui/StatusBar";
 import { PersianCalendar } from "../components/ui/PersianCalendar";
 import { parsePersianDate } from "../lib/persian-calendar";
 import { addAppointment, getBookedTimeSlots, TIME_SLOTS } from "../services/appointmentStore";
-import { getConversationByRequestAndParticipants, addConversation } from "../services/chatStore";
+import { getConversationByRequestAndParticipants, addConversation, addMessage } from "../services/chatStore";
 import { useAuth } from "../contexts/AuthContext";
 import type { BloodRequest, DonorProfile } from "../types";
 import { canDonateTo } from "../lib/bloodCompatibility";
@@ -69,6 +69,8 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
   const handleBook = () => {
     if (!donor) return;
     const now = new Date().toLocaleDateString("fa-IR");
+    const nowTime = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
+
     addAppointment({
       id: `APT-${Date.now()}`,
       donorId: donor.id,
@@ -82,6 +84,7 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
       status: "pending",
       createdAt: now,
     });
+
     let conv = getConversationByRequestAndParticipants(request.id, donor.id, request.hospitalId);
     if (!conv) {
       const cid = `CONV-${Date.now()}`;
@@ -93,10 +96,11 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
         donorId: donor.id,
         donorName: donor.name,
         requestId: request.id,
-        lastMessage: "رزرو نوبت انجام شد",
-        lastMessageTime: "همین حالا",
+        lastMessage: `نوبت ${selectedDate} ساعت ${selectedTime} رزرو شد`,
+        lastMessageTime: nowTime,
         unread: 1,
       });
+      addMessage({ id: `MSG-${Date.now()}`, conversationId: cid, senderId: donor.id, text: `سلام، من برای درخواست ${request.bloodType} نوبت ${selectedDate} ساعت ${selectedTime} رزرو کردم.`, timestamp: nowTime });
       conv = { id: cid, participants: [donor.id, request.hospitalId], hospitalId: request.hospitalId, hospitalName: request.hospitalName, donorId: donor.id, donorName: donor.name, requestId: request.id, lastMessage: "", lastMessageTime: "", unread: 0 };
     }
     setStep("done");

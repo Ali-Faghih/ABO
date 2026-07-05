@@ -116,7 +116,7 @@ export function AppLayout() {
       return <BookAppointmentScreen request={selectedRequest} onBack={() => { setSubScreen("none"); setSelectedRequest(null); }} onChat={(convId) => { setSelectedChatId(convId); setSubScreen("chat-detail"); }} />;
     }
     if (subScreen === "my-appointments") {
-      return <MyAppointmentsScreen onBack={() => setSubScreen("none")} />;
+      return <MyAppointmentsScreen onBack={() => setSubScreen("none")} onChat={(convId) => { setSelectedChatId(convId); setSubScreen("chat-detail"); }} />;
     }
     if (subScreen === "hospital-appointments") {
       return <HospitalAppointmentsScreen onBack={() => setSubScreen("none")} />;

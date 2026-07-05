@@ -16,6 +16,8 @@ export const HospitalHomeScreen = ({ hospital, onAddRequest, onAction, onAppoint
   const [editUrgency, setEditUrgency] = useState<"فوری" | "معمولی">("معمولی");
   const [editDeadline, setEditDeadline] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [toast, setToast] = useState<{ message: string; donor: string; visible: boolean } | null>(null);
+  const prevPendingRef = { current: 0 };
 
   const activeReqs = requests.filter((r) => r.status === "active" || r.status === "matched");
 
@@ -26,6 +28,13 @@ export const HospitalHomeScreen = ({ hospital, onAddRequest, onAction, onAppoint
     const counts: Record<string, number> = {};
     reqs.forEach((r) => { counts[r.id] = donors.filter((d) => canDonateTo(d.bloodType, r.bloodType)).length; });
     setCompatCounts(counts);
+    const pending = getAppointmentsByHospital(hospital.username).filter((a) => a.status === "pending");
+    if (pending.length > prevPendingRef.current && prevPendingRef.current > 0) {
+      const newest = pending[0];
+      setToast({ message: "نوبت جدید دریافت شد", donor: newest.donorName, visible: true });
+      setTimeout(() => setToast(null), 5000);
+    }
+    prevPendingRef.current = pending.length;
   };
 
   useEffect(() => { refresh(); const iv = setInterval(refresh, 5000); return () => clearInterval(iv); }, [hospital.username]);
@@ -56,6 +65,13 @@ export const HospitalHomeScreen = ({ hospital, onAddRequest, onAction, onAppoint
 
   return (
   <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
+    {toast?.visible && (
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-green-500 text-white rounded-2xl px-5 py-3 shadow-xl flex items-center gap-3 animate-slideDown max-w-[90vw]">
+        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+        <p className="text-xs font-bold">{toast.message}: <span className="font-normal">{toast.donor}</span></p>
+        <button onClick={() => setToast(null)} className="mr-2 opacity-70 hover:opacity-100"><XCircle size={14} /></button>
+      </div>
+    )}
     <div className="bg-white flex-shrink-0">
       <StatusBar />
       <div className="flex items-center justify-between px-5 pb-4">
@@ -127,8 +143,16 @@ export const HospitalHomeScreen = ({ hospital, onAddRequest, onAction, onAppoint
                 </div>
                 <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${req.urgency === "فوری" ? "bg-red-50 text-primary" : "bg-blue-50 text-blue-700"}`}>{req.urgency}</span>
               </div>
+              <div className="mb-2">
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
+                  <span className="flex items-center gap-1"><Users size={11} />پیشرفت اهدا</span>
+                  <span className="font-semibold text-foreground">{Math.min(req.matched, req.units)}/{req.units} واحد</span>
+                </div>
+                <div className="w-full h-2 bg-muted/50 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min((req.matched / req.units) * 100, 100)}%`, background: req.matched >= req.units ? "var(--color-green-500)" : "linear-gradient(90deg, var(--color-primary), var(--color-primary)/70%)" }} />
+                </div>
+              </div>
               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                <div className="flex items-center gap-1"><Users size={11} /><span>{req.matched} اهداکننده مچ</span></div>
                 <div className="flex items-center gap-1"><Clock size={11} /><span>مهلت: {req.deadline}</span></div>
               </div>
               <div className="flex gap-2 mt-3">

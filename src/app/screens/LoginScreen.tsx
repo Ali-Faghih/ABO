@@ -61,7 +61,7 @@ export const LoginScreen = () => {
           <label className="text-xs font-bold text-foreground mb-2 block">{activeType === "donor" ? "کد ملی / شماره موبایل" : "نام کاربری / کد بیمارستان"} <span className="text-primary">*</span></label>
           <div className="flex items-center gap-3 bg-muted/60 rounded-2xl px-4 py-3.5 border border-border">
             <User size={16} className="text-muted-foreground flex-shrink-0" />
-            <input type="text" value={username} onChange={(e) => { setUsername(e.target.value); setError(""); }} placeholder={activeType === "donor" ? "0012345678" : "HOSP-12345"} className="flex-1 bg-transparent text-sm outline-none text-right placeholder:text-muted-foreground/50" style={{ direction: "ltr" }} />
+            <input type="text" value={username} onChange={(e) => { setUsername(e.target.value); setError(""); }} placeholder={activeType === "donor" ? "1532620591" : "TEH-202D"} className="flex-1 bg-transparent text-sm outline-none text-right placeholder:text-muted-foreground/50" style={{ direction: "ltr" }} />
           </div>
         </div>
         <div>
@@ -107,7 +107,7 @@ export const LoginScreen = () => {
             <div className="w-14 h-14 bg-primary/8 rounded-full flex items-center justify-center mx-auto mb-4"><Lock size={28} className="text-primary" /></div>
             <h3 className="text-base font-bold text-foreground mb-2">فراموشی رمز عبور</h3>
             <p className="text-xs text-muted-foreground mb-4">{activeType === "donor" ? "کد ملی خود را وارد کنید." : "کد بیمارستان را وارد کنید."}</p>
-            <input type="text" value={forgotUsername} onChange={(e) => setForgotUsername(e.target.value)} placeholder={activeType === "donor" ? "0012345678" : "HOSP-12345"} className="w-full bg-muted/60 rounded-2xl px-4 py-3.5 border border-border text-sm outline-none text-center mb-4" style={{ direction: "ltr" }} />
+            <input type="text" value={forgotUsername} onChange={(e) => setForgotUsername(e.target.value)} placeholder={activeType === "donor" ? "1532620591" : "TEH-202D"} className="w-full bg-muted/60 rounded-2xl px-4 py-3.5 border border-border text-sm outline-none text-center mb-4" style={{ direction: "ltr" }} />
             <button onClick={handleForgotLookup} disabled={!forgotUsername.trim()} className="w-full bg-primary text-white py-3 rounded-2xl text-sm font-bold mb-3">بازیابی رمز عبور</button>
             {foundPassword !== null && (
               <div className={`rounded-2xl p-3 text-sm font-bold ${foundPassword ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>

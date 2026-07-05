@@ -100,14 +100,14 @@ export const RegistryAdminScreen = ({ onBack }: { onBack: () => void }) => {
     const f = form as any;
     const fields = isDonor
       ? [
-          { label: "کد ملی", key: "nationalId", ph: "0012345678" },
+          { label: "کد ملی", key: "nationalId", ph: "1532620591" },
           { label: "نام", key: "firstName", ph: "علی" },
           { label: "نام خانوادگی", key: "lastName", ph: "محمدی" },
           { label: "تاریخ تولد", key: "birthDate", ph: "۱۳۷۰/۰۲/۱۵" },
           { label: "تلفن", key: "phone", ph: "۰۹۱۲۱۱۱۱۲۲۲" },
         ]
       : [
-          { label: "کد بیمارستان", key: "hospitalId", ph: "HOSP-001" },
+          { label: "کد بیمارستان", key: "hospitalId", ph: "TEH-202D" },
           { label: "نام", key: "name", ph: "بیمارستان امام خمینی" },
           { label: "نوع", key: "type", ph: "دولتی" },
           { label: "شهر", key: "city", ph: "تهران" },

@@ -127,7 +127,13 @@ export const DonorHomeScreen = ({ donor, city, onCityClick, onAction, onBookRequ
                   <span className="text-[10px] text-muted-foreground">{req.city}</span>
                 </div>
                 <p className="text-sm font-semibold text-foreground truncate">{req.hospitalName}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">مهلت: {req.deadline} • {req.units} واحد</p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${Math.min((req.matched / req.units) * 100, 100)}%`, background: req.matched >= req.units ? "var(--color-green-500)" : "var(--color-primary)" }} />
+                  </div>
+                  <span className="text-[10px] font-semibold text-foreground">{Math.min(req.matched, req.units)}/{req.units}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">مهلت: {req.deadline}</p>
               </div>
               <div className="flex-shrink-0"><Calendar size={16} className="text-primary/60" /></div>
             </button>

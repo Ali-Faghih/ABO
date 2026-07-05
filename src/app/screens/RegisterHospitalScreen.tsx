@@ -126,7 +126,7 @@ export const RegisterHospitalScreen = () => {
             <label className="text-xs font-bold text-foreground mb-2 block">کد بیمارستان (کد شناسه) <span className="text-primary">*</span></label>
             <div className="flex items-center gap-3 bg-muted/60 rounded-2xl px-4 py-3.5 border border-border">
               <FileText size={16} className="text-muted-foreground flex-shrink-0" />
-              <input type="text" value={hospitalId} onChange={(e) => setHospitalId(e.target.value)} placeholder="HOSP-12345" className="flex-1 bg-transparent text-sm outline-none tracking-widest" style={{ direction: "ltr", textAlign: "right" }} />
+              <input type="text" value={hospitalId} onChange={(e) => setHospitalId(e.target.value)} placeholder="TEH-202D" className="flex-1 bg-transparent text-sm outline-none tracking-widest" style={{ direction: "ltr", textAlign: "right" }} />
             </div>
           </div>
           <div>
