@@ -180,3 +180,28 @@ export interface Appointment {
   status: AppointmentStatus;
   createdAt: string;
 }
+
+// ─── Notification Types (now embedded in Donor DB) ────────────────────────────
+export interface DonorNotification {
+  id: string;
+  type: "appointment" | "request" | "system" | "reminder";
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+}
+
+// ─── Magazine Types (new database) ────────────────────────────────────────────
+export interface MagazineArticle {
+  id: string;
+  title: string;
+  content: string;
+  summary: string;
+  author: string;
+  category: string;
+  tags: string[];
+  imageUrl: string | null;
+  publishDate: string;
+  readCount: number;
+  status: "published" | "draft";
+}
