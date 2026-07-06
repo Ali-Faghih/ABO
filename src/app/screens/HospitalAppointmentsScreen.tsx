@@ -13,6 +13,7 @@ interface Props { onBack: () => void }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: "در انتظار تأیید", color: "text-amber-700", bg: "bg-amber-50" },
+  invited: { label: "منتظر پاسخ داوطلب", color: "text-purple-700", bg: "bg-purple-50" },
   confirmed: { label: "تأیید شده", color: "text-green-700", bg: "bg-green-50" },
   completed: { label: "انجام شده", color: "text-blue-700", bg: "bg-blue-50" },
   cancelled: { label: "لغو شده", color: "text-red-700", bg: "bg-red-50" },
@@ -28,37 +29,38 @@ export const HospitalAppointmentsScreen = ({ onBack }: Props) => {
 
   useEffect(() => {
     if (!hospital) return;
-    setAppointments(getAppointmentsByHospital(hospital.username));
-    const iv = setInterval(() => setAppointments(getAppointmentsByHospital(hospital.username)), 5000);
+    const fetch = async () => { setAppointments(await getAppointmentsByHospital(hospital.username)); };
+    fetch();
+    const iv = setInterval(async () => { setAppointments(await getAppointmentsByHospital(hospital.username)); }, 5000);
     return () => clearInterval(iv);
   }, [hospital]);
 
-  const refresh = () => { if (hospital) setAppointments(getAppointmentsByHospital(hospital.username)); };
+  const refresh = async () => { if (hospital) setAppointments(await getAppointmentsByHospital(hospital.username)); };
 
-  const handleConfirm = (id: string) => {
-    confirmAppointment(id);
-    const apt = getAppointmentById(id);
+  const handleConfirm = async (id: string) => {
+    await confirmAppointment(id);
+    const apt = await getAppointmentById(id);
     if (apt) {
-      const req = getRequestById(apt.requestId);
+      const req = await getRequestById(apt.requestId);
       if (req && req.status === "active") {
-        updateRequest(req.id, { status: "matched" });
+        await updateRequest(req.id, { status: "matched" });
       }
     }
     refresh();
   };
 
-  const handleReject = (id: string) => {
-    rejectAppointment(id);
+  const handleReject = async (id: string) => {
+    await rejectAppointment(id);
     refresh();
   };
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (!actionId || !actionType) return;
     if (actionType === "done") {
-      completeAppointment(actionId);
-      const apt = getAppointmentById(actionId);
+      await completeAppointment(actionId);
+      const apt = await getAppointmentById(actionId);
       if (apt) {
-        const donor = getUserById(apt.donorId) as DonorProfile | null;
+        const donor = await getUserById(apt.donorId) as DonorProfile | null;
         if (donor) {
           const now = new Date();
           const next = new Date(now);
@@ -71,20 +73,20 @@ export const HospitalAppointmentsScreen = ({ onBack }: Props) => {
             eligible: false,
           });
         }
-        const req = getRequestById(apt.requestId);
+        const req = await getRequestById(apt.requestId);
         if (req) {
           const newMatched = (req.matched ?? 0) + 1;
           if (newMatched >= req.units) {
-            updateRequest(req.id, { matched: newMatched, status: "completed" });
-            const allApts = getAppointmentsByHospital(apt.hospitalId);
+            await updateRequest(req.id, { matched: newMatched, status: "completed" });
+            const allApts = await getAppointmentsByHospital(apt.hospitalId);
             allApts.filter((a) => a.requestId === req.id && a.id !== apt.id && (a.status === "pending" || a.status === "confirmed")).forEach((a) => cancelAppointment(a.id));
           } else {
-            updateRequest(req.id, { matched: newMatched });
+            await updateRequest(req.id, { matched: newMatched });
           }
         }
       }
     } else {
-      cancelAppointment(actionId);
+      await cancelAppointment(actionId);
     }
     setActionId(null);
     setActionType(null);
@@ -92,6 +94,7 @@ export const HospitalAppointmentsScreen = ({ onBack }: Props) => {
   };
 
   const pending = appointments.filter((a) => a.status === "pending");
+  const invited = appointments.filter((a) => a.status === "invited" && a.initiator === "hospital");
   const confirmed = appointments.filter((a) => a.status === "confirmed");
   const history = appointments.filter((a) => a.status === "completed" || a.status === "cancelled");
 
@@ -133,6 +136,29 @@ export const HospitalAppointmentsScreen = ({ onBack }: Props) => {
                         <button onClick={() => handleConfirm(a.id)} className="flex-1 bg-green-500 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm active:scale-[0.97] transition-transform"><CheckCircle size={13} />تأیید نوبت</button>
                         <button onClick={() => handleReject(a.id)} className="flex-1 bg-red-500 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm active:scale-[0.97] transition-transform"><XCircle size={13} />رد نوبت</button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {invited.length > 0 && (
+              <div className="mx-4 mt-5">
+                <h2 className="text-sm font-bold text-foreground mb-3">منتظر پاسخ داوطلب</h2>
+                <div className="flex flex-col gap-3">
+                  {invited.map((a) => (
+                    <div key={a.id} className="bg-white rounded-2xl p-4 shadow-sm border border-border/20 border-purple-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary/8 rounded-full flex items-center justify-center"><User size={18} className="text-primary" /></div>
+                          <div><p className="text-sm font-bold text-foreground">{a.donorName}</p><p className="text-[11px] text-muted-foreground">{a.bloodType}</p></div>
+                        </div>
+                        <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${STATUS_LABELS[a.status].bg} ${STATUS_LABELS[a.status].color}`}>{STATUS_LABELS[a.status].label}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-[11px] text-muted-foreground mb-2">
+                        <div className="flex items-center gap-1"><Calendar size={12} /><span>{a.date}</span></div>
+                        <div className="flex items-center gap-1"><Clock size={12} /><span>{a.time}</span></div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground bg-purple-50 rounded-xl px-3 py-1.5">دعوتنامه ارسال شد. در انتظار پاسخ داوطلب...</p>
                     </div>
                   ))}
                 </div>

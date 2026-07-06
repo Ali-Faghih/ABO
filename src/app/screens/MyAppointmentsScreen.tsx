@@ -11,6 +11,7 @@ interface Props { onBack: () => void; onChat?: (convId: string) => void }
 
 const TIMELINE: Record<string, { steps: { label: string; icon: string }[] }> = {
   pending: { steps: [{ label: "رزرو نوبت", icon: "📅" }, { label: "در انتظار تأیید", icon: "⏳" }, { label: "اهدای خون", icon: "🩸" }, { label: "تکمیل", icon: "✅" }] },
+  invited: { steps: [{ label: "دعوت از بیمارستان", icon: "📨" }, { label: "در انتظار پاسخ شما", icon: "⏳" }, { label: "اهدای خون", icon: "🩸" }, { label: "تکمیل", icon: "✅" }] },
   confirmed: { steps: [{ label: "رزرو نوبت", icon: "📅" }, { label: "تأیید شده", icon: "✅" }, { label: "اهدای خون", icon: "🩸" }, { label: "تکمیل", icon: "✅" }] },
   completed: { steps: [{ label: "رزرو نوبت", icon: "📅" }, { label: "تأیید شده", icon: "✅" }, { label: "اهدای خون", icon: "🩸" }, { label: "تکمیل", icon: "✅" }] },
   cancelled: { steps: [{ label: "رزرو نوبت", icon: "📅" }, { label: "لغو شده", icon: "❌" }, { label: "اهدای خون", icon: "🩸" }, { label: "تکمیل", icon: "✅" }] },
@@ -40,28 +41,29 @@ export const MyAppointmentsScreen = ({ onBack, onChat }: Props) => {
 
   useEffect(() => {
     if (!donor) return;
-    setAppointments(getAppointmentsByDonor(donor.id));
-    const iv = setInterval(() => setAppointments(getAppointmentsByDonor(donor.id)), 5000);
+    const fetch = async () => { setAppointments(await getAppointmentsByDonor(donor.id)); };
+    fetch();
+    const iv = setInterval(async () => { setAppointments(await getAppointmentsByDonor(donor.id)); }, 5000);
     return () => clearInterval(iv);
   }, [donor]);
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!cancelId) return;
-    cancelAppointment(cancelId);
+    await cancelAppointment(cancelId);
     setCancelId(null);
-    if (donor) setAppointments(getAppointmentsByDonor(donor.id));
+    if (donor) setAppointments(await getAppointmentsByDonor(donor.id));
   };
 
-  const handleChat = (a: Appointment) => {
+  const handleChat = async (a: Appointment) => {
     if (!donor) return;
-    const conv = getConversationByRequestAndParticipants(a.requestId, donor.id, a.hospitalId);
+    const conv = await getConversationByRequestAndParticipants(a.requestId, donor.id, a.hospitalId);
     if (conv) onChat?.(conv.id);
   };
 
   const active = appointments.filter((a) => a.status !== "cancelled" && a.status !== "completed");
   const history = appointments.filter((a) => a.status === "cancelled" || a.status === "completed");
 
-  const currentStepIndex = (status: string) => status === "pending" ? 1 : status === "confirmed" ? 2 : status === "completed" ? 3 : 1;
+  const currentStepIndex = (status: string) => status === "pending" ? 1 : status === "invited" ? 1 : status === "confirmed" ? 2 : status === "completed" ? 3 : 1;
 
   return (
     <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
