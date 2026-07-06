@@ -9,23 +9,25 @@ import type { DonorProfile } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import { MapPin, Bell, ChevronDown, Droplets, AlertCircle, Building2, Star, Calendar, Clock } from "lucide-react";
 import type { BloodRequest, RegistryHospital } from "../types";
+import { getDonorInvitations } from "../services/appointmentStore";
+import { Mail } from "lucide-react";
 
-interface Props { donor: DonorProfile; city: string; onCityClick: () => void; onAction: (fn: () => void) => void; onBookRequest: (req: BloodRequest) => void; onMyAppointments: () => void; onNotifications: () => void }
+interface Props { donor: DonorProfile; city: string; onCityClick: () => void; onAction: (fn: () => void) => void; onBookRequest: (req: BloodRequest) => void; onMyAppointments: () => void; onNotifications: () => void; onInvitations: () => void }
 
 export const DonorHomeScreen = ({ donor, city, onCityClick, onAction, onBookRequest, onMyAppointments, onNotifications }: Props) => {
   const { updateProfile } = useAuth();
-  const [allRequests, setAllRequests] = useState(getActiveRequests());
+  const [allRequests, setAllRequests] = useState<any[]>([]);
   const [showAllCities, setShowAllCities] = useState(false);
   const [showAllHospitals, setShowAllHospitals] = useState(false);
   const requests = showAllCities ? allRequests : allRequests.filter((r) => r.city === city);
   const [timeLeft, setTimeLeft] = useState<{ months: number; days: number; hours: number } | null>(null);
   useEffect(() => {
     if (donor.eligible || !donor.nextEligible) { setTimeLeft(null); return; }
-    const tick = () => {
+    const tick = async () => {
       const target = parsePersianDate(donor.nextEligible!);
       if (!target) { setTimeLeft(null); return; }
       const diff = target.getTime() - Date.now();
-      if (diff <= 0) { setTimeLeft(null); updateProfile({ eligible: true, nextEligible: undefined }); return; }
+      if (diff <= 0) { setTimeLeft(null); try { await updateProfile({ eligible: true, nextEligible: undefined }); } catch { /* ignore */ } return; }
       const totalHours = Math.floor(diff / (1000 * 60 * 60));
       setTimeLeft({ months: Math.floor(totalHours / (30 * 24)), days: Math.floor((totalHours % (30 * 24)) / 24), hours: totalHours % 24 });
     };
@@ -33,23 +35,34 @@ export const DonorHomeScreen = ({ donor, city, onCityClick, onAction, onBookRequ
     const iv = setInterval(tick, 60000);
     return () => clearInterval(iv);
   }, [donor.eligible, donor.nextEligible, updateProfile]);
-  const [listedHospitals, setListedHospitals] = useState(() => {
-    const all = getRegistryHospitals();
-    const ids = getListedHospitalIds();
-    return all.filter((h) => ids.includes(h.hospitalId));
-  });
+  const [inviteCount, setInviteCount] = useState(0);
   useEffect(() => {
-    setAllRequests(getActiveRequests());
-    const all = getRegistryHospitals();
-    const ids = getListedHospitalIds();
-    setListedHospitals(all.filter((h) => ids.includes(h.hospitalId)));
-    const iv = setInterval(() => {
-      setAllRequests(getActiveRequests());
-      const a = getRegistryHospitals();
-      const i = getListedHospitalIds();
-      setListedHospitals(a.filter((h) => i.includes(h.hospitalId)));
-    }, 5000);
+    const f = async () => {
+      try { const invs = await getDonorInvitations(donor.id); setInviteCount(invs.length); } catch { /* ignore */ }
+    };
+    f();
+    const iv = setInterval(f, 10000);
     return () => clearInterval(iv);
+  }, [donor.id]);
+  const [listedHospitals, setListedHospitals] = useState<any[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const f = async () => {
+      try {
+        const [reqs, all, ids] = await Promise.all([
+          getActiveRequests(),
+          getRegistryHospitals(),
+          getListedHospitalIds(),
+        ]);
+        if (!cancelled) {
+          setAllRequests(reqs);
+          setListedHospitals(all.filter((h) => ids.includes(h.hospitalId)));
+        }
+      } catch { /* ignore polling errors */ }
+    };
+    f();
+    const iv = setInterval(f, 5000);
+    return () => { cancelled = true; clearInterval(iv); };
   }, []);
   return (
   <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
@@ -108,6 +121,14 @@ export const DonorHomeScreen = ({ donor, city, onCityClick, onAction, onBookRequ
             <p className="text-white font-bold text-sm">نوبت‌های من</p>
             <p className="text-white/65 text-[11px] mt-0.5">مشاهده و مدیریت نوبت‌های اهدا</p>
           </div>
+        </button>
+        <button onClick={() => onAction(onInvitations)} className="w-full bg-amber-500 rounded-2xl p-3.5 flex items-center gap-3 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-transform mt-2">
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0"><Mail size={20} className="text-white" /></div>
+          <div className="text-right flex-1">
+            <p className="text-white font-bold text-sm">دعوتنامه‌های بیمارستان‌ها</p>
+            <p className="text-white/65 text-[11px] mt-0.5">{inviteCount > 0 ? `${inviteCount} دعوتنامه جدید` : "بررسی دعوتنامه‌ها"}</p>
+          </div>
+          {inviteCount > 0 && <div className="bg-white text-amber-600 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center">{inviteCount}</div>}
         </button>
       </div>
       <div className="mt-5 px-4">

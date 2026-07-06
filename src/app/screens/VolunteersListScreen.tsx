@@ -4,19 +4,23 @@ import { BloodBadge } from "../components/ui/BloodBadge";
 import { getAvailableDonors } from "../services/requestStore";
 import { canDonateTo } from "../lib/bloodCompatibility";
 import type { DonorReadiness } from "../types";
-import { ArrowLeft, User, MessageCircle, Search, MapPin, Filter } from "lucide-react";
+import { ArrowLeft, User, MessageCircle, Search, MapPin, Filter, SendHorizonal } from "lucide-react";
 
 const BLOOD_TYPES = ["همه", "O+", "A+", "B+", "AB+", "O-", "A-", "B-", "AB-"];
 
-interface Props { onBack: () => void; onChat: (donorId: string, donorName: string) => void }
+interface Props { onBack: () => void; onChat: (donorId: string, donorName: string) => void; onInvite: (donorId: string, donorName: string, bloodType: string) => void }
 
-export const VolunteersListScreen = ({ onBack, onChat }: Props) => {
+export const VolunteersListScreen = ({ onBack, onChat, onInvite }: Props) => {
   const [donors, setDonors] = useState<DonorReadiness[]>([]);
   const [search, setSearch] = useState("");
   const [bloodFilter, setBloodFilter] = useState("همه");
 
-  const refresh = () => setDonors(getAvailableDonors());
-  useEffect(() => { refresh(); const iv = setInterval(refresh, 5000); return () => clearInterval(iv); }, []);
+  useEffect(() => {
+    const f = async () => { setDonors(await getAvailableDonors()); };
+    f();
+    const iv = setInterval(f, 5000);
+    return () => clearInterval(iv);
+  }, []);
 
   const filtered = donors.filter((d) => {
     const matchesSearch = !search || d.donorName.includes(search) || d.bloodType.includes(search) || d.city.includes(search);
@@ -75,9 +79,14 @@ export const VolunteersListScreen = ({ onBack, onChat }: Props) => {
                         </div>
                       </div>
                     </div>
-                    <button onClick={() => onChat(d.donorId, d.donorName)} className="w-10 h-10 bg-primary/8 rounded-xl flex items-center justify-center flex-shrink-0 mr-3">
-                      <MessageCircle size={17} className="text-primary" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => onInvite(d.donorId, d.donorName, d.bloodType)} className="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center flex-shrink-0" title="ارسال دعوتنامه">
+                        <SendHorizonal size={17} className="text-secondary" />
+                      </button>
+                      <button onClick={() => onChat(d.donorId, d.donorName)} className="w-10 h-10 bg-primary/8 rounded-xl flex items-center justify-center flex-shrink-0" title="پیام">
+                        <MessageCircle size={17} className="text-primary" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
