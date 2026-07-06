@@ -17,9 +17,14 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
   const [step, setStep] = useState<"calendar" | "time" | "confirm" | "done">("calendar");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
-  const bookedSlots = selectedDate ? getBookedTimeSlots(request.hospitalId, selectedDate) : [];
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [countdown, setCountdown] = useState("");
   const [convId, setConvId] = useState("");
+
+  useEffect(() => {
+    if (!selectedDate) { setBookedSlots([]); return; }
+    (async () => { setBookedSlots(await getBookedTimeSlots(request.hospitalId, selectedDate)); })();
+  }, [selectedDate, request.hospitalId]);
 
   useEffect(() => {
     if (!donor || donor.eligible || !donor.nextEligible) return;
@@ -32,8 +37,7 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
   useEffect(() => {
     if (step !== "done" || !selectedDate) return;
     if (!donor) return;
-    const conv = getConversationByRequestAndParticipants(request.id, donor.id, request.hospitalId);
-    if (conv) setConvId(conv.id);
+    (async () => { const conv = await getConversationByRequestAndParticipants(request.id, donor.id, request.hospitalId); if (conv) setConvId(conv.id); })();
     const target = parsePersianDate(selectedDate);
     if (!target) return;
     const tick = () => {
@@ -66,12 +70,12 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
     </div>
   );
 
-  const handleBook = () => {
+  const handleBook = async () => {
     if (!donor) return;
     const now = new Date().toLocaleDateString("fa-IR");
     const nowTime = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
 
-    addAppointment({
+    await addAppointment({
       id: `APT-${Date.now()}`,
       donorId: donor.id,
       donorName: donor.name,
@@ -85,10 +89,10 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
       createdAt: now,
     });
 
-    let conv = getConversationByRequestAndParticipants(request.id, donor.id, request.hospitalId);
+    let conv = await getConversationByRequestAndParticipants(request.id, donor.id, request.hospitalId);
     if (!conv) {
       const cid = `CONV-${Date.now()}`;
-      addConversation({
+      await addConversation({
         id: cid,
         participants: [donor.id, request.hospitalId],
         hospitalId: request.hospitalId,
@@ -100,7 +104,7 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
         lastMessageTime: nowTime,
         unread: 1,
       });
-      addMessage({ id: `MSG-${Date.now()}`, conversationId: cid, senderId: donor.id, text: `سلام، من برای درخواست ${request.bloodType} نوبت ${selectedDate} ساعت ${selectedTime} رزرو کردم.`, timestamp: nowTime });
+      await addMessage({ id: `MSG-${Date.now()}`, conversationId: cid, senderId: donor.id, text: `سلام، من برای درخواست ${request.bloodType} نوبت ${selectedDate} ساعت ${selectedTime} رزرو کردم.`, timestamp: nowTime });
       conv = { id: cid, participants: [donor.id, request.hospitalId], hospitalId: request.hospitalId, hospitalName: request.hospitalName, donorId: donor.id, donorName: donor.name, requestId: request.id, lastMessage: "", lastMessageTime: "", unread: 0 };
     }
     setStep("done");

@@ -6,11 +6,12 @@ import { Search, MessageCircle, Building2, User, ChevronLeft } from "lucide-reac
 
 export const ChatListScreen = ({ onChatSelect }: { onChatSelect: (id: string) => void }) => {
   const { user } = useAuth();
-  const [conversations, setConversations] = useState(user ? getConversationsForUser(user.id) : []);
+  const [conversations, setConversations] = useState<any[]>([]);
   useEffect(() => {
     if (!user) return;
-    setConversations(getConversationsForUser(user.id));
-    const iv = setInterval(() => setConversations(getConversationsForUser(user.id)), 5000);
+    const f = async () => { setConversations(await getConversationsForUser(user.id)); };
+    f();
+    const iv = setInterval(f, 5000);
     return () => clearInterval(iv);
   }, [user]);
   return (

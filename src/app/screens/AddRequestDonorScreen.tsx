@@ -13,6 +13,20 @@ export const AddRequestDonorScreen = ({ donor, onBack }: { donor: DonorProfile; 
   const [showCalendar, setShowCalendar] = useState(false);
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const handleSubmit = async () => {
+    await setDonorReadiness({
+      id: `RDY-${Date.now()}`,
+      donorId: donor.id,
+      donorName: donor.name,
+      bloodType,
+      city: donor.city,
+      available: true,
+      readinessDate: date,
+      notes: notes || undefined,
+    });
+    setSubmitted(true);
+  };
   const handleSelectDate = (d: string) => { setDate(d); setShowCalendar(false); };
   if (submitted) return (
     <div className="flex flex-col h-full bg-white items-center justify-center gap-5 px-8" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
@@ -61,19 +75,8 @@ export const AddRequestDonorScreen = ({ donor, onBack }: { donor: DonorProfile; 
         </div>
       </div>
       <div className="px-5 pb-8 pt-3 border-t border-border/40 flex-shrink-0">
-        <button onClick={() => {
-          setDonorReadiness({
-            id: `RDY-${Date.now()}`,
-            donorId: donor.id,
-            donorName: donor.name,
-            bloodType,
-            city: donor.city,
-            available: true,
-            readinessDate: date,
-            notes: notes || undefined,
-          });
-          setSubmitted(true);
-        }} className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-base shadow-lg shadow-primary/20">ثبت آمادگی</button>
+        <button onClick={handleSubmit} className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-base shadow-lg shadow-primary/20">ثبت آمادگی</button>
+        {error && <p className="text-xs text-red-500 text-center mt-2">{error}</p>}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import { StatusBar } from "../components/ui/StatusBar";
 import { BloodBadge } from "../components/ui/BloodBadge";
 import { useAuth } from "../contexts/AuthContext";
 import { getReadinessByDonor } from "../services/requestStore";
-import type { DonorProfile } from "../types";
+import type { DonorProfile, DonorReadiness } from "../types";
 import { LogOut, Camera, User, Award, Activity, Phone, MapPin, Edit, CheckCircle, Save, X } from "lucide-react";
 
 export const DonorProfileScreen = ({ donor, onLogout }: { donor: DonorProfile; onLogout: () => void }) => {
@@ -13,7 +13,8 @@ export const DonorProfileScreen = ({ donor, onLogout }: { donor: DonorProfile; o
   const [editPhone, setEditPhone] = useState(donor.phone);
   const [editCity, setEditCity] = useState(donor.city);
   const [editWeight, setEditWeight] = useState(String(donor.weight ?? ""));
-  const lastReadiness = getReadinessByDonor(donor.id);
+  const [lastReadiness, setLastReadiness] = useState<DonorReadiness | null>(null);
+  useEffect(() => { getReadinessByDonor(donor.id).then(setLastReadiness); }, [donor.id]);
   return (
     <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
       <div className="bg-white flex-shrink-0">
@@ -83,7 +84,7 @@ export const DonorProfileScreen = ({ donor, onLogout }: { donor: DonorProfile; o
             </div>
             {editing ? (
               <div className="flex gap-2">
-                <button onClick={() => { updateProfile({ phone: editPhone, city: editCity, weight: editWeight ? Number(editWeight) : undefined } as any); setEditing(false); }} className="flex-1 bg-green-500 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"><Save size={15} />ذخیره تغییرات</button>
+                <button onClick={async () => { await updateProfile({ phone: editPhone, city: editCity, weight: editWeight ? Number(editWeight) : undefined } as any); setEditing(false); }} className="flex-1 bg-green-500 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"><Save size={15} />ذخیره تغییرات</button>
                 <button onClick={() => { setEditing(false); setEditPhone(donor.phone); setEditCity(donor.city); setEditWeight(String(donor.weight ?? "")); }} className="flex-1 bg-muted text-muted-foreground py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"><X size={15} />انصراف</button>
               </div>
             ) : (

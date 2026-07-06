@@ -52,9 +52,7 @@ export const RegisterDonorScreen = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  if (isAuthenticated) return null;
-
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!nationalId.trim() || nationalId.trim().length !== 10) {
       setRegisterError("لطفاً کد ملی ۱۰ رقمی را وارد کنید.");
       return;
@@ -63,12 +61,13 @@ export const RegisterDonorScreen = () => {
       setRegisterError("لطفاً تاریخ تولد خود را کامل وارد کنید.");
       return;
     }
-    if (usernameExists(nationalId.trim())) {
+    const exists = await usernameExists(nationalId.trim());
+    if (exists) {
       setRegisterError("این کد ملی قبلاً ثبت‌نام شده است. لطفاً وارد حساب خود شوید.");
       return;
     }
     const birthDate = `${birthYear}/${birthMonth}/${birthDay}`;
-    const found = findDonorInRegistry(nationalId, birthDate);
+    const found = await findDonorInRegistry(nationalId, birthDate);
     if (!found) {
       setRegisterError("کد ملی یا تاریخ تولد در سامانه ثبت احوال یافت نشد. اطلاعات وارد شده را بررسی کنید.");
       return;
@@ -81,10 +80,10 @@ export const RegisterDonorScreen = () => {
     if (!phone) setPhone(found.phone || "");
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (password.length < 8) { setRegisterError("رمز عبور باید حداقل ۸ کاراکتر باشد."); return; }
     if (password !== confirmPassword) { setRegisterError("رمز عبور و تکرار آن مطابقت ندارند."); return; }
-    const result = registerDonor({
+    const result = await registerDonor({
       nationalId: nationalId.trim(),
       phone: phone.trim(),
       firstName,

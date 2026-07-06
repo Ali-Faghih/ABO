@@ -15,6 +15,25 @@ export const AddRequestHospitalScreen = ({ hospital, onBack }: { hospital: Hospi
   const [showCalendar, setShowCalendar] = useState(false);
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const handleSubmit = async () => {
+    const ok = await addRequest({
+      id: `REQ-${Date.now()}`,
+      hospitalId: hospital.username,
+      hospitalName: hospital.name,
+      bloodType,
+      units,
+      urgency,
+      deadline,
+      status: "active",
+      matched: 0,
+      city: hospital.city,
+      createdAt: new Date().toLocaleDateString("fa-IR"),
+      notes: notes || undefined,
+    });
+    if (ok) { onBack(); }
+    else { setError("خطا در ثبت درخواست"); }
+  };
   const handleSelectDeadline = (d: string) => { setDeadline(d); setShowCalendar(false) };
   if (submitted) return (
     <div className="flex flex-col h-full bg-white items-center justify-center gap-5 px-8" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
@@ -38,23 +57,8 @@ export const AddRequestHospitalScreen = ({ hospital, onBack }: { hospital: Hospi
         <div className="mb-5"><label className="text-sm font-bold text-foreground mb-3 block">توضیحات پزشکی</label><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="توضیحات اضافه..." className="w-full bg-muted/60 rounded-2xl px-4 py-3.5 border border-border text-sm outline-none text-right resize-none" style={{ direction: "rtl" }} /></div>
       </div>
       <div className="px-5 pb-8 pt-3 border-t border-border/40 flex-shrink-0">
-        <button onClick={() => {
-        addRequest({
-          id: `REQ-${Date.now()}`,
-          hospitalId: hospital.username,
-          hospitalName: hospital.name,
-          bloodType,
-          units,
-          urgency,
-          deadline,
-          status: "active",
-          matched: 0,
-          city: hospital.city,
-          createdAt: new Date().toLocaleDateString("fa-IR"),
-          notes: notes || undefined,
-        });
-        setSubmitted(true);
-      }} className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-base shadow-lg shadow-primary/20">ارسال درخواست</button>
+        <button onClick={handleSubmit} className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-base shadow-lg shadow-primary/20">ارسال درخواست</button>
+        {error && <p className="text-xs text-red-500 text-center mt-2">{error}</p>}
       </div>
     </div>
   );

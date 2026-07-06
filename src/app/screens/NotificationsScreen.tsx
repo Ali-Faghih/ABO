@@ -24,9 +24,12 @@ export const NotificationsScreen = ({ onBack }: Props) => {
 
   useEffect(() => {
     if (!donor) return;
-    seedDonorNotifications(donor);
-    setNotifications(getNotifications(donor.id));
-    const iv = setInterval(() => setNotifications(getNotifications(donor.id)), 5000);
+    const init = async () => {
+      await seedDonorNotifications(donor);
+      setNotifications(await getNotifications(donor.id));
+    };
+    init();
+    const iv = setInterval(async () => { setNotifications(await getNotifications(donor.id)); }, 5000);
     return () => clearInterval(iv);
   }, [donor]);
 
@@ -45,10 +48,10 @@ export const NotificationsScreen = ({ onBack }: Props) => {
     return () => clearInterval(iv);
   }, [donor, donor?.eligible, donor?.nextEligible, updateProfile]);
 
-  const handleMarkRead = () => {
+  const handleMarkRead = async () => {
     if (!donor) return;
-    markAllAsRead(donor.id);
-    setNotifications(getNotifications(donor.id));
+    await markAllAsRead(donor.id);
+    setNotifications(await getNotifications(donor.id));
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;

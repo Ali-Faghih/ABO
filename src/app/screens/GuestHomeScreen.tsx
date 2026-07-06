@@ -4,8 +4,14 @@ import { getActiveRequests } from "../services/requestStore";
 import { Lock, MapPin, ChevronDown } from "lucide-react";
 
 export const GuestHomeScreen = ({ city, onCityClick, onLogin, onAction }: { city: string; onCityClick: () => void; onLogin: () => void; onAction: (fn: () => void) => void }) => {
-  const [allRequests, setRequests] = useState(getActiveRequests());
-  useEffect(() => { setRequests(getActiveRequests()); const iv = setInterval(() => setRequests(getActiveRequests()), 5000); return () => clearInterval(iv); }, []);
+  const [allRequests, setRequests] = useState<any[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const fetch = async () => { try { const data = await getActiveRequests(); if (!cancelled) setRequests(data); } catch { /* ignore polling errors */ } };
+    fetch();
+    const iv = setInterval(fetch, 5000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []);
   const filtered = allRequests.filter((r) => r.city === city);
   const display = filtered.length > 0 ? filtered.slice(0, 2) : allRequests.slice(0, 2);
   return (

@@ -6,28 +6,27 @@ import { ArrowLeft, Building2, User, Phone, Send, Calendar } from "lucide-react"
 
 export const ChatDetailScreen = ({ conversationId, onBack }: { conversationId: string; onBack: () => void }) => {
   const { user } = useAuth();
-  const conv = user ? getConversationById(conversationId) : null;
-  const [messages, setMessages] = useState(conv ? getMessages(conversationId) : []);
+  const [conv, setConv] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
   const [msg, setMsg] = useState("");
+  useEffect(() => { getConversationById(conversationId).then(setConv); }, [conversationId]);
+  useEffect(() => { updateConversation(conversationId, { unread: 0 }); }, [conversationId]);
   useEffect(() => {
-    if (conv) updateConversation(conversationId, { unread: 0 });
-  }, [conversationId, conv]);
-  useEffect(() => {
-    if (!conv) return;
-    setMessages(getMessages(conversationId));
-    const iv = setInterval(() => setMessages(getMessages(conversationId)), 3000);
+    const f = async () => { setMessages(await getMessages(conversationId)); };
+    f();
+    const iv = setInterval(f, 3000);
     return () => clearInterval(iv);
-  }, [conversationId, conv]);
+  }, [conversationId]);
   const isDonor = user?.type === "donor";
   const partnerName = isDonor ? conv?.hospitalName ?? "" : conv?.donorName ?? "";
   const partnerIcon = isDonor ? <Building2 size={18} className="text-primary" /> : <User size={18} className="text-primary" />;
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!msg.trim() || !conv || !user) return;
     const timestamp = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
-    addMessage({ id: `MSG-${Date.now()}`, conversationId: conv.id, senderId: user.id, text: msg.trim(), timestamp });
-    updateConversation(conv.id, { lastMessage: msg.trim(), lastMessageTime: timestamp });
+    await addMessage({ id: `MSG-${Date.now()}`, conversationId: conv.id, senderId: user.id, text: msg.trim(), timestamp });
+    await updateConversation(conv.id, { lastMessage: msg.trim(), lastMessageTime: timestamp });
     setMsg("");
-    setMessages(getMessages(conversationId));
+    setMessages(await getMessages(conversationId));
   };
   if (!conv) return <div className="flex items-center justify-center h-full text-muted-foreground text-sm">مکالمه یافت نشد</div>;
   return (

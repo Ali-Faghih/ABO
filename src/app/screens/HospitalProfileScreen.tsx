@@ -4,23 +4,24 @@ import { BloodBadge } from "../components/ui/BloodBadge";
 import { useAuth } from "../contexts/AuthContext";
 import { getRequestsByHospital } from "../services/requestStore";
 import { isHospitalListed, addToListed } from "../services/hospitalListStore";
-import type { HospitalProfile } from "../types";
+import type { HospitalProfile, BloodRequest } from "../types";
 import { LogOut, Building2, MapPin, Phone, TrendingUp, Users, Activity, Edit, Save, X, CheckCircle, List } from "lucide-react";
 
 export const HospitalProfileScreen = ({ hospital, onLogout }: { hospital: HospitalProfile; onLogout: () => void }) => {
   const { updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<"info" | "requests" | "stats">("info");
-  const [requests, setRequests] = useState(getRequestsByHospital(hospital.username));
+  const [requests, setRequests] = useState<BloodRequest[]>([]);
   const [editing, setEditing] = useState(false);
   const [editPhone, setEditPhone] = useState(hospital.phone);
   const [editAddress, setEditAddress] = useState(hospital.address);
-  const [listed, setListed] = useState(isHospitalListed(hospital.username));
+  const [listed, setListed] = useState(false);
   const activeReqs = requests.filter((r) => r.status === "active" || r.status === "matched");
   const completedReqs = requests.filter((r) => r.status === "completed");
-  useEffect(() => { setRequests(getRequestsByHospital(hospital.username)); const iv = setInterval(() => setRequests(getRequestsByHospital(hospital.username)), 5000); return () => clearInterval(iv); }, [hospital.username]);
+  useEffect(() => { getRequestsByHospital(hospital.username).then(setRequests); const iv = setInterval(() => getRequestsByHospital(hospital.username).then(setRequests), 5000); return () => clearInterval(iv); }, [hospital.username]);
+  useEffect(() => { isHospitalListed(hospital.username).then(setListed); }, [hospital.username]);
 
-  const handleRequestListing = () => {
-    addToListed(hospital.username);
+  const handleRequestListing = async () => {
+    await addToListed(hospital.username);
     setListed(true);
   };
   return (
@@ -84,7 +85,7 @@ export const HospitalProfileScreen = ({ hospital, onLogout }: { hospital: Hospit
             </div>
             {editing ? (
               <div className="flex gap-2 mt-3">
-                <button onClick={() => { updateProfile({ phone: editPhone, address: editAddress } as any); setEditing(false); }} className="flex-1 bg-green-500 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"><Save size={15} />ذخیره تغییرات</button>
+                <button onClick={async () => { await updateProfile({ phone: editPhone, address: editAddress } as any); setEditing(false); }} className="flex-1 bg-green-500 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"><Save size={15} />ذخیره تغییرات</button>
                 <button onClick={() => { setEditing(false); setEditPhone(hospital.phone); setEditAddress(hospital.address); }} className="flex-1 bg-muted text-muted-foreground py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"><X size={15} />انصراف</button>
               </div>
             ) : (

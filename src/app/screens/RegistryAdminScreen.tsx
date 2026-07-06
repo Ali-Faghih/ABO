@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StatusBar } from "../components/ui/StatusBar";
 import {
   getRegistryDonors, addRegistryDonor, updateRegistryDonor, deleteRegistryDonor,
@@ -15,14 +15,16 @@ const emptyHospital = (): RegistryHospital => ({ hospitalId: "", name: "", type:
 
 export const RegistryAdminScreen = ({ onBack }: { onBack: () => void }) => {
   const [tab, setTab] = useState<Tab>("donors");
-  const [donors, setDonors] = useState(getRegistryDonors());
-  const [hospitals, setHospitals] = useState(getRegistryHospitals());
+  const [donors, setDonors] = useState<any[]>([]);
+  const [hospitals, setHospitals] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<RegistryDonor | RegistryHospital>(emptyDonor());
   const [formError, setFormError] = useState("");
 
-  const refresh = () => { setDonors(getRegistryDonors()); setHospitals(getRegistryHospitals()); };
+  useEffect(() => { refresh(); }, []);
+
+  const refresh = async () => { setDonors(await getRegistryDonors()); setHospitals(await getRegistryHospitals()); };
 
   const openAdd = () => {
     setForm(tab === "donors" ? emptyDonor() : emptyHospital());
@@ -43,7 +45,7 @@ export const RegistryAdminScreen = ({ onBack }: { onBack: () => void }) => {
     setShowForm(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (tab === "donors") {
       const d = form as RegistryDonor;
       if (!d.nationalId.trim() || !d.firstName.trim() || !d.lastName.trim()) {
@@ -51,12 +53,14 @@ export const RegistryAdminScreen = ({ onBack }: { onBack: () => void }) => {
         return;
       }
       if (editingId !== null) {
-        if (!updateRegistryDonor(editingId, d)) {
+        const ok = await updateRegistryDonor(editingId, d);
+        if (!ok) {
           setFormError("خطا در به‌روزرسانی.");
           return;
         }
       } else {
-        if (!addRegistryDonor(d)) {
+        const ok = await addRegistryDonor(d);
+        if (!ok) {
           setFormError("این کد ملی قبلاً ثبت شده است.");
           return;
         }
@@ -68,12 +72,14 @@ export const RegistryAdminScreen = ({ onBack }: { onBack: () => void }) => {
         return;
       }
       if (editingId !== null) {
-        if (!updateRegistryHospital(editingId, h)) {
+        const ok = await updateRegistryHospital(editingId, h);
+        if (!ok) {
           setFormError("خطا در به‌روزرسانی.");
           return;
         }
       } else {
-        if (!addRegistryHospital(h)) {
+        const ok = await addRegistryHospital(h);
+        if (!ok) {
           setFormError("این کد بیمارستان قبلاً ثبت شده است.");
           return;
         }
@@ -81,18 +87,18 @@ export const RegistryAdminScreen = ({ onBack }: { onBack: () => void }) => {
     }
     setFormError("");
     setShowForm(false);
-    refresh();
+    await refresh();
   };
 
-  const handleDelete = (id: string) => {
-    if (tab === "donors") deleteRegistryDonor(id);
-    else deleteRegistryHospital(id);
-    refresh();
+  const handleDelete = async (id: string) => {
+    if (tab === "donors") await deleteRegistryDonor(id);
+    else await deleteRegistryHospital(id);
+    await refresh();
   };
 
-  const handleReset = () => {
-    resetRegistry();
-    refresh();
+  const handleReset = async () => {
+    await resetRegistry();
+    await refresh();
   };
 
   const renderForm = () => {

@@ -9,8 +9,9 @@ import { Bell, AlertCircle, Users, Award, Plus, ChevronRight, Clock, Calendar, E
 interface Props { hospital: HospitalProfile; onAddRequest: () => void; onAction: (fn: () => void) => void; onAppointments?: () => void; onNotifications?: () => void; onVolunteers?: () => void }
 
 export const HospitalHomeScreen = ({ hospital, onAddRequest, onAction, onAppointments, onNotifications, onVolunteers }: Props) => {
-  const [requests, setRequests] = useState(getRequestsByHospital(hospital.username));
+  const [requests, setRequests] = useState<any[]>([]);
   const [compatCounts, setCompatCounts] = useState<Record<string, number>>({});
+  const [availableDonors, setAvailableDonors] = useState<any[]>([]);
   const [editReq, setEditReq] = useState<BloodRequest | null>(null);
   const [editUnits, setEditUnits] = useState(1);
   const [editUrgency, setEditUrgency] = useState<"فوری" | "معمولی">("معمولی");
@@ -21,20 +22,26 @@ export const HospitalHomeScreen = ({ hospital, onAddRequest, onAction, onAppoint
 
   const activeReqs = requests.filter((r) => r.status === "active" || r.status === "matched");
 
-  const refresh = () => {
-    const reqs = getRequestsByHospital(hospital.username);
-    setRequests(reqs);
-    const donors = getAvailableDonors();
-    const counts: Record<string, number> = {};
-    reqs.forEach((r) => { counts[r.id] = donors.filter((d) => canDonateTo(d.bloodType, r.bloodType)).length; });
-    setCompatCounts(counts);
-    const pending = getAppointmentsByHospital(hospital.username).filter((a) => a.status === "pending");
-    if (pending.length > prevPendingRef.current && prevPendingRef.current > 0) {
-      const newest = pending[0];
-      setToast({ message: "نوبت جدید دریافت شد", donor: newest.donorName, visible: true });
-      setTimeout(() => setToast(null), 5000);
-    }
-    prevPendingRef.current = pending.length;
+  const refresh = async () => {
+    try {
+      const [reqs, donors, apts] = await Promise.all([
+        getRequestsByHospital(hospital.username),
+        getAvailableDonors(),
+        getAppointmentsByHospital(hospital.username),
+      ]);
+      setRequests(reqs);
+      const counts: Record<string, number> = {};
+      reqs.forEach((r) => { counts[r.id] = donors.filter((d) => canDonateTo(d.bloodType, r.bloodType)).length; });
+      setCompatCounts(counts);
+      setAvailableDonors(donors);
+      const pending = apts.filter((a) => a.status === "pending");
+      if (pending.length > prevPendingRef.current && prevPendingRef.current > 0) {
+        const newest = pending[0];
+        setToast({ message: "نوبت جدید دریافت شد", donor: newest.donorName, visible: true });
+        setTimeout(() => setToast(null), 5000);
+      }
+      prevPendingRef.current = pending.length;
+    } catch { /* ignore polling errors */ }
   };
 
   useEffect(() => { refresh(); const iv = setInterval(refresh, 5000); return () => clearInterval(iv); }, [hospital.username]);
@@ -47,18 +54,20 @@ export const HospitalHomeScreen = ({ hospital, onAddRequest, onAction, onAppoint
     setShowCancelConfirm(false);
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!editReq) return;
-    updateRequest(editReq.id, { units: editUnits, urgency: editUrgency, deadline: editDeadline });
+    await updateRequest(editReq.id, { units: editUnits, urgency: editUrgency, deadline: editDeadline });
     setEditReq(null);
     refresh();
   };
 
-  const handleEditCancel = () => {
+  const handleEditCancel = async () => {
     if (!editReq) return;
-    const apts = getAppointmentsByHospital(hospital.username).filter((a) => a.requestId === editReq.id && (a.status === "pending" || a.status === "confirmed"));
-    apts.forEach((a) => cancelAppointment(a.id));
-    cancelRequest(editReq.id);
+    try {
+      const apts = (await getAppointmentsByHospital(hospital.username)).filter((a) => a.requestId === editReq.id && (a.status === "pending" || a.status === "confirmed"));
+      await Promise.all(apts.map((a) => cancelAppointment(a.id)));
+      await cancelRequest(editReq.id);
+    } catch { /* ignore */ }
     setEditReq(null);
     refresh();
   };
@@ -89,7 +98,7 @@ export const HospitalHomeScreen = ({ hospital, onAddRequest, onAction, onAppoint
       <div className="mx-4 mt-4 grid grid-cols-3 gap-2.5">
         {[
           { label: "درخواست فعال", value: String(activeReqs.length), icon: AlertCircle, c: "text-primary", bg: "bg-red-50" },
-          { label: "داوطلبان", value: String(Object.values(compatCounts).reduce((s, c) => s + c, 0) > 0 ? Object.values(compatCounts).reduce((s, c) => s + c, 0) : getAvailableDonors().length), icon: Users, c: "text-blue-600", bg: "bg-blue-50" },
+          { label: "داوطلبان", value: String(Object.values(compatCounts).reduce((s, c) => s + c, 0) > 0 ? Object.values(compatCounts).reduce((s, c) => s + c, 0) : availableDonors.length), icon: Users, c: "text-blue-600", bg: "bg-blue-50" },
           { label: "کل اهداها", value: String(requests.filter((r) => r.status === "completed").length), icon: Award, c: "text-green-600", bg: "bg-green-50" },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-2xl p-3 shadow-sm border border-border/20">

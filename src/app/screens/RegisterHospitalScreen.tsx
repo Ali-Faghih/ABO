@@ -46,16 +46,17 @@ export const RegisterHospitalScreen = () => {
 
   if (isAuthenticated) return null;
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!hospitalId.trim()) {
       setRegisterError("لطفاً کد بیمارستان را وارد کنید.");
       return;
     }
-    if (usernameExists(hospitalId.trim())) {
+    const exists = await usernameExists(hospitalId.trim());
+    if (exists) {
       setRegisterError("این کد بیمارستان قبلاً ثبت‌نام شده است. لطفاً وارد حساب خود شوید.");
       return;
     }
-    const found = findHospitalInRegistry(hospitalId);
+    const found = await findHospitalInRegistry(hospitalId);
     if (!found) {
       setRegisterError("کد بیمارستان در سامانه وزارت بهداشت یافت نشد. لطفاً کد را بررسی کنید.");
       return;
@@ -69,12 +70,12 @@ export const RegisterHospitalScreen = () => {
     if (!address) setAddress(found.address || "");
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!address.trim()) { setRegisterError("لطفاً آدرس کامل را وارد کنید."); return; }
     if (!phone.trim()) { setRegisterError("لطفاً شماره تلفن بیمارستان را وارد کنید."); return; }
     if (password.length < 8) { setRegisterError("رمز عبور باید حداقل ۸ کاراکتر باشد."); return; }
     if (password !== confirmPassword) { setRegisterError("رمز عبور و تکرار آن مطابقت ندارند."); return; }
-    const result = registerHospital({
+    const result = await registerHospital({
       hospitalId: hospitalId.trim(),
       name: hospitalName,
       hospitalType,

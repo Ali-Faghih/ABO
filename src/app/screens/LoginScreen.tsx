@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
 import { findUserByUsername } from "../services/authStorage";
 import { StatusBar } from "../components/ui/StatusBar";
-import { ArrowLeft, Droplets, User, EyeOff, Eye, LogIn, AlertCircle, Shield, Info, Lock } from "lucide-react";
+import { ArrowLeft, Droplets, User, EyeOff, Eye, LogIn, AlertCircle, Shield, Info, Lock, Loader } from "lucide-react";
 import type { UserType } from "../types";
 
 export const LoginScreen = () => {
@@ -14,17 +14,20 @@ export const LoginScreen = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotUsername, setForgotUsername] = useState("");
   const [foundPassword, setFoundPassword] = useState<string | null>(null);
 
-  const handleForgotLookup = () => {
-    const user = findUserByUsername(forgotUsername.trim());
+  const handleForgotLookup = async () => {
+    const user = await findUserByUsername(forgotUsername.trim());
     setFoundPassword(user ? user.password : null);
   };
 
-  const handleSubmit = () => {
-    const result = login(username, password, activeType);
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    const result = await login(username, password, activeType);
+    setSubmitting(false);
     if (!result.success) setError(result.error ?? "خطا در ورود");
     else { setError(""); navigate("/app", { replace: true }); }
   };
@@ -83,9 +86,9 @@ export const LoginScreen = () => {
             <p className="text-[11px] text-red-700 leading-relaxed">{error}</p>
           </div>
         )}
-        <button onClick={handleSubmit} className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
-          <LogIn size={17} />
-          ورود به سامانه
+        <button onClick={handleSubmit} disabled={submitting} className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-60">
+          {submitting ? <Loader size={17} className="animate-spin" /> : <LogIn size={17} />}
+          {submitting ? "در حال ورود..." : "ورود به سامانه"}
         </button>
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-border" />
