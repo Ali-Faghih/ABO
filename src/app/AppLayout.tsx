@@ -23,6 +23,8 @@ import { MyAppointmentsScreen } from "./screens/MyAppointmentsScreen";
 import { HospitalAppointmentsScreen } from "./screens/HospitalAppointmentsScreen";
 import { NotificationsScreen } from "./screens/NotificationsScreen";
 import { VolunteersListScreen } from "./screens/VolunteersListScreen";
+import { SendInvitationScreen } from "./screens/SendInvitationScreen";
+import { DonorInvitationsScreen } from "./screens/DonorInvitationsScreen";
 import { getConversationByRequestAndParticipants, addConversation } from "./services/chatStore";
 import type { Tab, SubScreen, BloodRequest } from "./types";
 import { Loader } from "lucide-react";
@@ -38,7 +40,9 @@ export function AppLayout() {
     catch { return "تهران"; }
   });
   const [selectedChatId, setSelectedChatId] = useState("");
+  const [selectedArticleId, setSelectedArticleId] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<BloodRequest | null>(null);
+  const [inviteTarget, setInviteTarget] = useState<{ donorId: string; donorName: string; bloodType: string } | null>(null);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const [registerType, setRegisterType] = useState<"donor" | "hospital">("donor");
 
@@ -102,7 +106,7 @@ export function AppLayout() {
 
   const renderTab = () => {
     if (subScreen === "chat-detail" && selectedChatId) return <ChatDetailScreen conversationId={selectedChatId} onBack={() => { setSubScreen("none"); setSelectedChatId(""); }} />;
-    if (subScreen === "article-detail") return <ArticleDetailScreen onBack={() => setSubScreen("none")} />;
+    if (subScreen === "article-detail" && selectedArticleId) return <ArticleDetailScreen articleId={selectedArticleId} onBack={() => { setSubScreen("none"); setSelectedArticleId(""); }} />;
     if (subScreen === "city-select") {
       return <CitySelectScreen currentCity={selectedCity} onSelect={setSelectedCity} onBack={() => setSubScreen("none")} />;
     }
@@ -110,7 +114,13 @@ export function AppLayout() {
       return <RegistryAdminScreen onBack={() => setSubScreen("none")} />;
     }
     if (subScreen === "volunteers-list") {
-      return <VolunteersListScreen onBack={() => setSubScreen("none")} onChat={(donorId, donorName) => { const cid = `CONV-${Date.now()}`; if (user?.type === "hospital") { let conv = getConversationByRequestAndParticipants("", donorId, user.username); if (!conv) { addConversation({ id: cid, participants: [donorId, user.username], hospitalId: user.username, hospitalName: user.name, donorId, donorName, requestId: "", lastMessage: "", lastMessageTime: "", unread: 0 }); conv = { id: cid, participants: [donorId, user.username], hospitalId: user.username, hospitalName: user.name, donorId, donorName, requestId: "", lastMessage: "", lastMessageTime: "", unread: 0 }; } setSelectedChatId(conv.id); } setSubScreen("chat-detail"); }} />;
+      return <VolunteersListScreen onBack={() => setSubScreen("none")} onChat={async (donorId, donorName) => { const cid = `CONV-${Date.now()}`; if (user?.type === "hospital") { let conv = await getConversationByRequestAndParticipants("", donorId, user.username); if (!conv) { await addConversation({ id: cid, participants: [donorId, user.username], hospitalId: user.username, hospitalName: user.name, donorId, donorName, requestId: "", lastMessage: "", lastMessageTime: "", unread: 0 }); conv = { id: cid, participants: [donorId, user.username], hospitalId: user.username, hospitalName: user.name, donorId, donorName, requestId: "", lastMessage: "", lastMessageTime: "", unread: 0 }; } setSelectedChatId(conv.id); } setSubScreen("chat-detail"); }} onInvite={(donorId, donorName, bloodType) => { setInviteTarget({ donorId, donorName, bloodType }); setSubScreen("send-invitation"); }} />;
+    }
+    if (subScreen === "send-invitation" && inviteTarget && user?.type === "hospital") {
+      return <SendInvitationScreen donorId={inviteTarget.donorId} donorName={inviteTarget.donorName} donorBloodType={inviteTarget.bloodType} hospitalId={user.username} hospitalName={user.name} onBack={() => { setSubScreen("none"); setInviteTarget(null); }} />;
+    }
+    if (subScreen === "donor-invitations") {
+      return <DonorInvitationsScreen donorId={user?.id || ""} onBack={() => setSubScreen("none")} onChat={(convId) => { setSelectedChatId(convId); setSubScreen("chat-detail"); }} onMyAppointments={() => setSubScreen("my-appointments")} />;
     }
     if (subScreen === "book-appointment" && selectedRequest && user?.type === "donor") {
       return <BookAppointmentScreen request={selectedRequest} onBack={() => { setSubScreen("none"); setSelectedRequest(null); }} onChat={(convId) => { setSelectedChatId(convId); setSubScreen("chat-detail"); }} />;
@@ -129,7 +139,7 @@ export function AppLayout() {
       case "home":
         if (isGuest) return <GuestHomeScreen city={selectedCity} onCityClick={() => setSubScreen("city-select")} onLogin={handleGuestPromptLogin} onAction={onAction} />;
         if (user?.type === "donor") {
-          return <DonorHomeScreen donor={user} city={selectedCity} onCityClick={() => setSubScreen("city-select")} onAction={onAction} onBookRequest={(req) => { setSelectedRequest(req); setSubScreen("book-appointment"); }} onMyAppointments={() => setSubScreen("my-appointments")} onNotifications={() => setSubScreen("notifications")} />;
+          return <DonorHomeScreen donor={user} city={selectedCity} onCityClick={() => setSubScreen("city-select")} onAction={onAction} onBookRequest={(req) => { setSelectedRequest(req); setSubScreen("book-appointment"); }} onMyAppointments={() => setSubScreen("my-appointments")} onNotifications={() => setSubScreen("notifications")} onInvitations={() => setSubScreen("donor-invitations")} />;
         }
         if (user?.type === "hospital") {
           return <HospitalHomeScreen hospital={user} onAddRequest={() => setTab("add")} onAction={onAction} onAppointments={() => setSubScreen("hospital-appointments")} onNotifications={() => setSubScreen("notifications")} onVolunteers={() => setSubScreen("volunteers-list")} />;
@@ -142,7 +152,7 @@ export function AppLayout() {
         if (user?.type === "hospital") return <AddRequestHospitalScreen hospital={user} onBack={goHome} />;
         return null;
       case "magazine":
-        return <MagazineScreen onArticle={() => setSubScreen("article-detail")} />;
+        return <MagazineScreen onArticle={(id) => { setSelectedArticleId(id); setSubScreen("article-detail"); }} />;
       case "profile":
         if (isGuest) {
           return <GuestProfileScreen onLogin={handleGuestPromptLogin} onRegister={() => navigate("/register/donor")} />;
