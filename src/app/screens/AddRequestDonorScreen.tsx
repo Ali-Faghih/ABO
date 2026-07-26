@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { PersianCalendar } from "../components/ui/PersianCalendar";
 import { BLOOD_TYPES } from "../data/constants";
 import { setDonorReadiness } from "../services/requestStore";
@@ -37,7 +36,6 @@ export const AddRequestDonorScreen = ({ donor, onBack }: { donor: DonorProfile; 
   );
   return (
     <div className="flex flex-col h-full bg-white" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-      <StatusBar />
       <div className="flex items-center gap-3 px-5 pt-2 pb-4 border-b border-border/30 flex-shrink-0">
         <button onClick={onBack} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center flex-shrink-0"><ArrowLeft size={19} className="text-foreground rotate-180" /></button>
         <h1 className="text-lg font-bold text-foreground">ثبت آمادگی اهدا</h1>
