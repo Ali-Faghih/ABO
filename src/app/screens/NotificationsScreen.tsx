@@ -1,22 +1,28 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { parsePersianDate } from "../lib/persian-calendar";
 import { useAuth } from "../contexts/AuthContext";
 import { getNotifications, markAllAsRead, seedDonorNotifications } from "../services/notificationStore";
 import type { AppNotification } from "../services/notificationStore";
 import type { DonorProfile } from "../types";
-import { ArrowLeft, Bell, Clock, CheckCheck, CalendarDays, Heart, Info, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Bell, Clock, CheckCheck, CalendarDays, Heart, Info, AlertTriangle, CheckCircle2, MessageCircle, Mail, SendHorizonal } from "lucide-react";
 
-interface Props { onBack: () => void }
+interface Props { onBack: () => void; onNavigate?: (screen: string, refId?: string) => void }
 
 const TYPE_CONFIG: Record<string, { icon: typeof Bell; color: string; bg: string }> = {
   appointment: { icon: CalendarDays, color: "text-blue-600", bg: "bg-blue-50" },
   reminder: { icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
   system: { icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
   request: { icon: Heart, color: "text-rose-600", bg: "bg-rose-50" },
+  message: { icon: MessageCircle, color: "text-cyan-600", bg: "bg-cyan-50" },
 };
 
-export const NotificationsScreen = ({ onBack }: Props) => {
+const REF_ICONS: Record<string, typeof Bell> = {
+  appointment: CalendarDays,
+  invitation: Mail,
+  conversation: MessageCircle,
+};
+
+export const NotificationsScreen = ({ onBack, onNavigate }: Props) => {
   const { user, updateProfile } = useAuth();
   const donor = user as DonorProfile | null;
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -54,11 +60,25 @@ export const NotificationsScreen = ({ onBack }: Props) => {
     setNotifications(await getNotifications(donor.id));
   };
 
+  const handleClick = async (n: AppNotification) => {
+    if (!onNavigate || !n.refType || !n.refId) return;
+    switch (n.refType) {
+      case "appointment":
+        onNavigate(user?.type === "hospital" ? "hospital-appointments" : "my-appointments", n.refId);
+        break;
+      case "invitation":
+        onNavigate("donor-invitations", n.refId);
+        break;
+      case "conversation":
+        onNavigate("chat-detail", n.refId);
+        break;
+    }
+  };
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-      <StatusBar />
       <div className="bg-white flex-shrink-0">
         <div className="flex items-center gap-3 px-5 pt-2 pb-4">
           <button onClick={onBack} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center flex-shrink-0"><ArrowLeft size={19} className="text-foreground rotate-180" /></button>
@@ -68,7 +88,7 @@ export const NotificationsScreen = ({ onBack }: Props) => {
           )}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto pb-6">
+      <div className="flex-1 overflow-y-auto pb-24">
         {timeLeft && (
           <div className="mx-4 mt-4 bg-gradient-to-r from-primary to-primary/80 rounded-2xl p-4 shadow-lg shadow-primary/20">
             <div className="flex items-center gap-3">
@@ -90,9 +110,10 @@ export const NotificationsScreen = ({ onBack }: Props) => {
             <div className="flex flex-col gap-2.5">
               {notifications.map((n) => {
                 const cfg = TYPE_CONFIG[n.type] ?? { icon: Info, color: "text-gray-600", bg: "bg-gray-50" };
-                const Icon = cfg.icon;
+                const Icon = REF_ICONS[n.refType ?? ""] ?? cfg.icon;
                 return (
-                  <div key={n.id} className={`bg-white rounded-2xl p-4 shadow-sm border ${n.read ? "border-border/20" : "border-primary/20"} transition-colors`}>
+                  <button key={n.id} onClick={() => handleClick(n)} disabled={!n.refType || !onNavigate}
+                    className={`w-full text-right bg-white rounded-2xl p-4 shadow-sm border ${n.read ? "border-border/20" : "border-primary/20"} transition-all active:scale-[0.98] disabled:active:scale-100`}>
                     <div className="flex items-start gap-3">
                       <div className={`w-10 h-10 ${cfg.bg} rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5`}>
                         <Icon size={18} className={cfg.color} />
@@ -106,9 +127,14 @@ export const NotificationsScreen = ({ onBack }: Props) => {
                           </div>
                         </div>
                         <p className={`text-[11px] leading-relaxed ${n.read ? "text-muted-foreground" : "text-foreground/80"}`}>{n.message}</p>
+                        {n.refType && onNavigate && (
+                          <p className="text-[10px] text-primary font-semibold mt-1 flex items-center gap-1">
+                            <SendHorizonal size={10} />مشاهده
+                          </p>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

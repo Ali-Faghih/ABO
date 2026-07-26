@@ -47,12 +47,13 @@ export async function getConversationsByRequest(requestId: string): Promise<Chat
   return convs.filter((c) => c.requestId === requestId);
 }
 
-export async function addConversation(conv: ChatConversation): Promise<void> {
-  await api("POST", "/chats", {
+export async function addConversation(conv: ChatConversation): Promise<ChatConversation> {
+  const result = await api<any>("POST", "/chats", {
     hospitalId: conv.hospitalId,
     donorId: conv.donorId,
     requestId: conv.requestId,
   });
+  return mapConv(result);
 }
 
 export async function updateConversation(id: string, updates: Partial<ChatConversation>): Promise<void> {

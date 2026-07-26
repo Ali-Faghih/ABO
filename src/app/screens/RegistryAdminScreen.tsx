@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import {
   getRegistryDonors, addRegistryDonor, updateRegistryDonor, deleteRegistryDonor,
   getRegistryHospitals, addRegistryHospital, updateRegistryHospital, deleteRegistryHospital,
@@ -153,7 +152,6 @@ export const RegistryAdminScreen = ({ onBack }: { onBack: () => void }) => {
   return (
     <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
       <div className="bg-white flex-shrink-0">
-        <StatusBar />
         <div className="flex items-center justify-between px-5 pb-4">
           <h1 className="text-lg font-bold text-foreground">مدیریت سامانه ثبت احوال</h1>
           <button onClick={onBack} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center"><ArrowLeft size={19} className="text-foreground rotate-180" /></button>
@@ -166,7 +164,7 @@ export const RegistryAdminScreen = ({ onBack }: { onBack: () => void }) => {
           ))}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto pb-6">
+      <div className="flex-1 overflow-y-auto pb-24">
         <div className="flex items-center justify-between px-5 py-3">
           <button onClick={openAdd} className="bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm">
             <Plus size={14} />افزودن

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { BloodBadge } from "../components/ui/BloodBadge";
 import { useAuth } from "../contexts/AuthContext";
 import { getReadinessByDonor } from "../services/requestStore";
@@ -18,7 +17,6 @@ export const DonorProfileScreen = ({ donor, onLogout }: { donor: DonorProfile; o
   return (
     <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
       <div className="bg-white flex-shrink-0">
-        <StatusBar />
         <div className="flex items-center justify-between px-5 pb-4">
           <h1 className="text-lg font-bold text-foreground">پروفایل من</h1>
           <button onClick={onLogout} className="w-9 h-9 bg-muted/70 rounded-full flex items-center justify-center"><LogOut size={17} className="text-foreground" /></button>

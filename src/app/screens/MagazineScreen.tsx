@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { getArticles } from "../services/magazineStore";
 import type { Article } from "../services/magazineStore";
 import { ChevronRight, FileText, Loader } from "lucide-react";
@@ -30,7 +29,6 @@ export const MagazineScreen = ({ onArticle }: { onArticle: (id: string) => void 
   return (
     <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
       <div className="bg-white flex-shrink-0">
-        <StatusBar />
         <div className="px-5 pb-4">
           <h1 className="text-lg font-bold text-foreground mb-3">مجله اهدای خون</h1>
           <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ direction: "rtl" }}>

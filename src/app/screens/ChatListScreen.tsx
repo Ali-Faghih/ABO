@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { useAuth } from "../contexts/AuthContext";
 import { getConversationsForUser } from "../services/chatStore";
 import { Search, MessageCircle, Building2, User, ChevronLeft } from "lucide-react";
@@ -17,7 +16,6 @@ export const ChatListScreen = ({ onChatSelect }: { onChatSelect: (id: string) =>
   return (
   <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
     <div className="bg-white flex-shrink-0">
-      <StatusBar />
       <div className="px-5 pb-4">
         <h1 className="text-lg font-bold text-foreground mb-3">پیام‌ها</h1>
         <div className="flex items-center gap-2 bg-muted/70 rounded-2xl px-4 py-2.5">

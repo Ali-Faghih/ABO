@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { getArticleById } from "../services/magazineStore";
 import type { Article } from "../services/magazineStore";
 import { ArrowLeft, Droplets, Loader } from "lucide-react";
@@ -39,7 +38,6 @@ export const ArticleDetailScreen = ({ articleId, onBack }: { articleId: string; 
   return (
     <div className="flex flex-col h-full bg-white" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
       <div className="bg-white border-b border-border/30 flex-shrink-0">
-        <StatusBar />
         <div className="flex items-center justify-between px-5 pt-2 pb-3">
           <div className="w-9 h-9" />
           <button onClick={onBack} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center"><ArrowLeft size={19} className="text-foreground rotate-180" /></button>
