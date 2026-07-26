@@ -100,11 +100,11 @@ router.get("/:id/notifications", (req, res) => {
 });
 
 router.post("/:id/notifications", (req, res) => {
-  const { type, title, message } = req.body;
+  const { type, title, message, refType, refId } = req.body;
   const id = `NOTIF-${req.params.id}-${Date.now()}`;
   const time = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
   const db = getDb();
-  db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?)", [id, req.params.id, type || "system", title || "", message || "", time, 0]);
+  db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", [id, req.params.id, type || "system", title || "", message || "", time, 0, refType || null, refId || null]);
   saveDb();
   res.json({ id, time });
 });

@@ -97,9 +97,15 @@ export async function initDb() {
       title TEXT NOT NULL,
       message TEXT NOT NULL,
       time TEXT NOT NULL,
-      read INTEGER DEFAULT 0
+      read INTEGER DEFAULT 0,
+      refType TEXT DEFAULT NULL,
+      refId TEXT DEFAULT NULL
     )
   `);
+
+  // Migrate existing rows — add refType/refId columns if missing
+  try { db.run("ALTER TABLE notifications ADD COLUMN refType TEXT DEFAULT NULL"); } catch {}
+  try { db.run("ALTER TABLE notifications ADD COLUMN refId TEXT DEFAULT NULL"); } catch {}
 
   db.run(`
     CREATE TABLE IF NOT EXISTS conversations (

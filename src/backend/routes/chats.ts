@@ -4,6 +4,12 @@ import { getDb, saveDb, queryAll } from "../db.js";
 
 const router = Router();
 
+function getHospitalUserId(hospitalCode: string): string | null {
+  const db = getDb();
+  const rows = queryAll("SELECT id FROM users WHERE username=? AND type='hospital'", [hospitalCode]);
+  return (rows.length && rows[0].values.length) ? rows[0].values[0][0] as string : null;
+}
+
 function mapConversation(row: any, cols: string[]) {
   const obj: any = {};
   cols.forEach((c: string, i: number) => { obj[c] = row[i]; });
@@ -19,7 +25,10 @@ router.get("/", (req, res) => {
 
 router.get("/user/:userId", (req, res) => {
   const db = getDb();
-  const rows = queryAll("SELECT * FROM conversations WHERE hospitalId=? OR donorId=? ORDER BY lastMessageTime DESC", [req.params.userId, req.params.userId]);
+  const usernameRow = queryAll("SELECT username FROM users WHERE id=?", [req.params.userId]);
+  const username = (usernameRow.length && usernameRow[0].values.length) ? usernameRow[0].values[0][0] as string : null;
+  const params = username ? [req.params.userId, username, req.params.userId, username] : [req.params.userId, req.params.userId, req.params.userId, req.params.userId];
+  const rows = queryAll("SELECT * FROM conversations WHERE hospitalId IN (?, ?) OR donorId IN (?, ?) ORDER BY lastMessageTime DESC", params);
   const convs = rows.length ? rows[0].values.map((r: any) => mapConversation(r, rows[0].columns)) : [];
   res.json(convs);
 });
@@ -58,6 +67,20 @@ router.post("/:id/messages", (req, res) => {
   const db = getDb();
   db.run("INSERT INTO messages VALUES (?,?,?,?,?)", [id, req.params.id, senderId, text, timestamp]);
   db.run("UPDATE conversations SET lastMessage=?, lastMessageTime=?, unread=unread+1 WHERE id=?", [text, timestamp, req.params.id]);
+  // Notify the other participant
+  const conv = queryAll("SELECT * FROM conversations WHERE id=?", [req.params.id]);
+  if (conv.length && conv[0].values.length) {
+    const cols = conv[0].columns;
+    const vals = conv[0].values[0];
+    const convObj: any = {};
+    cols.forEach((c: string, i: number) => { convObj[c] = vals[i]; });
+    const recipientId = senderId === convObj.hospitalId ? convObj.donorId : convObj.hospitalId;
+    const notifUserId = recipientId === convObj.hospitalId ? (getHospitalUserId(recipientId) || recipientId) : recipientId;
+    const nid = `NOTIF-${notifUserId}-${Date.now()}`;
+    const shortText = text.length > 80 ? text.slice(0, 80) + "..." : text;
+    db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", [nid, notifUserId, "message", "پیام جدید", shortText, timestamp, 0, "conversation", req.params.id]);
+    saveDb();
+  }
   saveDb();
   res.json({ id, conversationId: req.params.id, senderId, text, timestamp });
 });

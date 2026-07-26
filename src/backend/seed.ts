@@ -134,7 +134,7 @@ export async function seedAll() {
   const regDonors = [...maleDonors, ...femaleDonors]; // 8 total
   const today = new Date().toLocaleDateString("fa-IR");
 
-  const DONOR_CITIES = ["تهران", "اصفهان", "شیراز", "تهران", "اصفهان", "مشهد", "تبریز", "شیراز"];
+  const DONOR_CITIES = ["تهران", "تهران", "تهران", "تهران", "تهران", "تهران", "تهران", "تهران"];
   const DONOR_BLOOD = ["O+", "A+", "B-", "B+", "A-", "AB+", "O-", "O+"];
   const DONOR_WEIGHTS = [75, 65, 60, 72, 68, 80, 70, 63];
   const DONOR_HEIGHTS = [172, 165, 162, 170, 167, 180, 175, 160];
@@ -192,19 +192,19 @@ export async function seedAll() {
 
   // ── Seed notifications ─────────────────────────────────────────────────────
   // Donor 1: confirmed appointment (APPT-001) → gets confirmation + reminder
-  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?)", ["NOTIF-D1-001", "seed-donor-001", "appointment", "نوبت تأیید شد", "نوبت اهدای خون شما در بیمارستان امام خمینی برای تاریخ ۱۴۰۵/۰۴/۱۴ ساعت ۰۹:۰۰ تأیید شد.", "۱۰:۳۰", 0]);
-  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?)", ["NOTIF-D1-002", "seed-donor-001", "reminder", "یادآوری نوبت", "فردا نوبت اهدای خون دارید. لطفاً شب قبل استراحت کافی داشته باشید.", "۰۸:۰۰", 0]);
+  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", ["NOTIF-D1-001", "seed-donor-001", "appointment", "نوبت تأیید شد", "نوبت اهدای خون شما در بیمارستان امام خمینی برای تاریخ ۱۴۰۵/۰۴/۱۴ ساعت ۰۹:۰۰ تأیید شد.", "۱۰:۳۰", 0, "appointment", "APPT-001"]);
+  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", ["NOTIF-D1-002", "seed-donor-001", "reminder", "یادآوری نوبت", "فردا نوبت اهدای خون دارید. لطفاً شب قبل استراحت کافی داشته باشید.", "۰۸:۰۰", 0, null, null]);
   // Donor 2: pending appointment → NO notification yet (waiting for hospital)
   // Donor 3: pending appointment → NO notification yet (waiting for hospital)
 
   // Hospital 1 (Imam Khomeini): new appointment request from Donor 1
-  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?)", ["NOTIF-H1-001", "seed-hosp-001", "appointment", "درخواست نوبت جدید", "داوطلب علی محمدی برای تاریخ ۱۴۰۵/۰۴/۱۴ ساعت ۰۹:۰۰ درخواست نوبت اهدای خون داده است.", "۱۰:۳۰", 0]);
+  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", ["NOTIF-H1-001", "seed-hosp-001", "appointment", "درخواست نوبت جدید", "داوطلب علی محمدی برای تاریخ ۱۴۰۵/۰۴/۱۴ ساعت ۰۹:۰۰ درخواست نوبت اهدای خون داده است.", "۱۰:۳۰", 0, "appointment", "APPT-001"]);
   // Hospital 1: active urgent request
-  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?)", ["NOTIF-H1-002", "seed-hosp-001", "request", "درخواست خون فوری", "درخواست ۲ واحد O- فوری برای بیمار بدحال ثبت شد.", "۱۰:۰۰", 0]);
+  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", ["NOTIF-H1-002", "seed-hosp-001", "request", "درخواست خون فوری", "درخواست ۲ واحد O- فوری برای بیمار بدحال ثبت شد.", "۱۰:۰۰", 0, "request", "REQ-001"]);
   // Hospital 3 (Sina): new appointment request from Donor 2
-  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?)", ["NOTIF-H3-001", "seed-hosp-003", "appointment", "درخواست نوبت جدید", "داوطلب محمد حسینی برای تاریخ ۱۴۰۵/۰۴/۱۵ ساعت ۱۰:۰۰ درخواست نوبت اهدای خون داده است.", "۱۰:۳۰", 0]);
+  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", ["NOTIF-H3-001", "seed-hosp-003", "appointment", "درخواست نوبت جدید", "داوطلب محمد حسینی برای تاریخ ۱۴۰۵/۰۴/۱۵ ساعت ۱۰:۰۰ درخواست نوبت اهدای خون داده است.", "۱۰:۳۰", 0, "appointment", "APPT-002"]);
   // Hospital 2 (Shariati): new appointment request from Donor 3
-  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?)", ["NOTIF-H2-001", "seed-hosp-002", "appointment", "درخواست نوبت جدید", "داوطلب امیر رضایی برای تاریخ ۱۴۰۵/۰۴/۲۰ ساعت ۱۴:۰۰ درخواست نوبت اهدای خون داده است.", "۱۴:۳۰", 0]);
+  db.run("INSERT OR IGNORE INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", ["NOTIF-H2-001", "seed-hosp-002", "appointment", "درخواست نوبت جدید", "داوطلب امیر رضایی برای تاریخ ۱۴۰۵/۰۴/۲۰ ساعت ۱۴:۰۰ درخواست نوبت اهدای خون داده است.", "۱۴:۳۰", 0, "appointment", "APPT-004"]);
 
   // ── Seed requests ─────────────────────────────────────────────────────────
   const firstHospId = demoIds[0];
@@ -224,6 +224,10 @@ export async function seedAll() {
   db.run("INSERT OR IGNORE INTO appointments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ["APPT-002", "REQ-003", "seed-donor-002", "محمد حسینی", demoIds[2], regHospitals[2][1], "B+", "۱۴۰۵/۰۴/۱۵", "۱۰:۰۰", "pending", now, "donor"]);
   db.run("INSERT OR IGNORE INTO appointments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ["APPT-003", "REQ-006", "seed-donor-001", "علی محمدی", firstHospId, firstHospName, "AB+", "۱۴۰۵/۰۳/۲۷", "۱۱:۰۰", "completed", "۲۷ خرداد ۱۴۰۵", "donor"]);
   db.run("INSERT OR IGNORE INTO appointments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ["APPT-004", "REQ-007", "seed-donor-003", "امیر رضایی", demoIds[1], regHospitals[1][1], "B-", "۱۴۰۵/۰۴/۲۰", "۱۴:۰۰", "pending", now, "donor"]);
+
+  // ── Seed invitations (hospital-initiated flow) ────────────────────────────
+  // Hospital 2 (Shariati) invites Donor 4 (Hassan Ahmadi, B+) for REQ-007
+  db.run("INSERT OR IGNORE INTO appointments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ["APPT-005", "REQ-007", "seed-donor-004", "حسن احمدی", demoIds[1], regHospitals[1][1], "B+", "۱۴۰۵/۰۴/۲۲", "۱۰:۰۰", "invited", now, "hospital"]);
 
   // ── Seed conversation + messages ──────────────────────────────────────────
   db.run("INSERT OR IGNORE INTO conversations VALUES (?,?,?,?,?,?,?)", ["CONV-001", firstHospId, "seed-donor-001", "REQ-001", "ممنون. لطفاً کارت ملی و آزمایش اخیر همراه داشته باشید", "۱۰:۳۵", 1]);

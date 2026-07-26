@@ -31,8 +31,8 @@ app.get("/api/health", (_req, res) => {
 async function start() {
   await initDb();
   await seedAll();
-  app.listen(PORT, () => {
-    console.log(`ABO backend running on http://localhost:${PORT}`);
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`ABO backend running on http://0.0.0.0:${PORT}`);
   });
 }
 

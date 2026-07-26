@@ -4,6 +4,12 @@ import { getDb, saveDb, queryAll } from "../db.js";
 
 const router = Router();
 
+function getHospitalUserId(hospitalCode: string): string | null {
+  const db = getDb();
+  const rows = queryAll("SELECT id FROM users WHERE username=? AND type='hospital'", [hospitalCode]);
+  return (rows.length && rows[0].values.length) ? rows[0].values[0][0] as string : null;
+}
+
 const VALID_REQ_STATUS = new Set(["active", "matched", "completed", "cancelled"]);
 const ALLOWED_REQ_TRANSITIONS: Record<string, Set<string>> = {
   active: new Set(["matched", "cancelled"]),
@@ -134,6 +140,13 @@ router.get("/appointments/hospital/:hospitalId", (req, res) => {
   res.json(appts);
 });
 
+router.get("/appointments/:id", (req, res) => {
+  const db = getDb();
+  const rows = queryAll("SELECT * FROM appointments WHERE id=?", [req.params.id]);
+  if (!rows.length || !rows[0].values.length) return res.status(404).json({ error: "not found" });
+  res.json(mapAppointment(rows[0].values[0], rows[0].columns));
+});
+
 router.post("/:requestId/appointments", (req, res) => {
   const { donorId, donorName, hospitalId, hospitalName, bloodType, date, time } = req.body;
   const id = `APT-${Date.now()}`;
@@ -141,6 +154,14 @@ router.post("/:requestId/appointments", (req, res) => {
   const db = getDb();
   db.run("INSERT INTO appointments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", [id, req.params.requestId, donorId, donorName || "", hospitalId, hospitalName || "", bloodType || "", date, time, "pending", now, "donor"]);
   saveDb();
+  // Notify hospital of new appointment request
+  const hospitalUserId = getHospitalUserId(hospitalId);
+  if (hospitalUserId) {
+    const nid = `NOTIF-${hospitalUserId}-${Date.now()}`;
+    const ntime = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
+    db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", [nid, hospitalUserId, "appointment", "درخواست نوبت جدید", `داوطلب ${donorName} برای تاریخ ${date} ساعت ${time} درخواست نوبت اهدای خون داده است.`, ntime, 0, "appointment", id]);
+    saveDb();
+  }
   res.json({ id, requestId: req.params.requestId, donorId, donorName, hospitalId, hospitalName, bloodType, date, time, status: "pending", createdAt: now, initiator: "donor" });
 });
 
@@ -154,6 +175,15 @@ router.put("/appointments/:appointmentId", (req, res) => {
     const allowed = VALID_APPT_TRANSITIONS[prev.status];
     if (!allowed || !allowed.has(req.body.status)) return res.status(400).json({ error: "invalid status transition" });
     db.run("UPDATE appointments SET status=? WHERE id=?", [req.body.status, req.params.appointmentId]);
+    saveDb();
+    // Notify donor of status change
+    const nid = `NOTIF-${prev.donorId}-${Date.now()}`;
+    const ntime = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
+    if (req.body.status === "confirmed") {
+      db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", [nid, prev.donorId, "appointment", "نوبت تأیید شد", `نوبت اهدای خون شما در ${prev.hospitalName} برای تاریخ ${prev.date} ساعت ${prev.time} تأیید شد.`, ntime, 0, "appointment", req.params.appointmentId]);
+    } else if (req.body.status === "cancelled") {
+      db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", [nid, prev.donorId, "appointment", "نوبت لغو شد", `متأسفانه نوبت ${prev.date} ساعت ${prev.time} در ${prev.hospitalName} لغو شد.`, ntime, 0, "appointment", req.params.appointmentId]);
+    }
     saveDb();
   }
 
@@ -173,7 +203,7 @@ router.post("/appointments/invite", (req, res) => {
   // Create notification for donor
   const notifId = `NOTIF-${donorId}-${Date.now()}`;
   const notifTime = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
-  db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?)", [notifId, donorId, "appointment", "دعوتنامه نوبت", `بیمارستان ${hospitalName} از شما برای تاریخ ${date} ساعت ${time} دعوت به اهدای خون کرده است.`, notifTime, 0]);
+  db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", [notifId, donorId, "appointment", "دعوتنامه نوبت", `بیمارستان ${hospitalName} از شما برای تاریخ ${date} ساعت ${time} دعوت به اهدای خون کرده است.`, notifTime, 0, "invitation", id]);
   saveDb();
   res.json({ id, requestId, donorId, donorName, hospitalId, hospitalName, bloodType, date, time, status: "invited", createdAt: now, initiator: "hospital" });
 });
@@ -198,14 +228,17 @@ router.put("/appointments/invitation/:id/respond", (req, res) => {
   saveDb();
 
   // Notify hospital of response
-  const notifId = `NOTIF-${prev.hospitalId}-${Date.now()}`;
-  const notifTime = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
-  const title = status === "confirmed" ? "دعوتنامه تأیید شد" : "دعوتنامه رد شد";
-  const msg = status === "confirmed"
-    ? `داوطلب ${prev.donorName} دعوت شما برای تاریخ ${prev.date} ساعت ${prev.time} را پذیرفت.`
-    : `داوطلب ${prev.donorName} دعوت شما برای تاریخ ${prev.date} را رد کرد.`;
-  db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?)", [notifId, prev.hospitalId, "appointment", title, msg, notifTime, 0]);
-  saveDb();
+  const hospitalUserId = getHospitalUserId(prev.hospitalId);
+  if (hospitalUserId) {
+    const notifId = `NOTIF-${hospitalUserId}-${Date.now()}`;
+    const notifTime = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
+    const title = status === "confirmed" ? "دعوتنامه تأیید شد" : "دعوتنامه رد شد";
+    const msg = status === "confirmed"
+      ? `داوطلب ${prev.donorName} دعوت شما برای تاریخ ${prev.date} ساعت ${prev.time} را پذیرفت.`
+      : `داوطلب ${prev.donorName} دعوت شما برای تاریخ ${prev.date} را رد کرد.`;
+    db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", [notifId, hospitalUserId, "appointment", title, msg, notifTime, 0, "appointment", req.params.id]);
+    saveDb();
+  }
 
   const fresh = queryAll("SELECT * FROM appointments WHERE id=?", [req.params.id]);
   res.json(fresh.length ? mapAppointment(fresh[0].values[0], fresh[0].columns) : prev);
