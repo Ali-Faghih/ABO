@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { getDonorInvitations, acceptInvitation, declineInvitation } from "../services/appointmentStore";
+import { getConversationByRequestAndParticipants, addConversation, addMessage } from "../services/chatStore";
 import { ArrowLeft, Check, X, Calendar, Clock, Building2, Loader, CheckCircle, XCircle, AlertCircle, MessageCircle } from "lucide-react";
 import type { Appointment } from "../types";
 
@@ -16,11 +16,18 @@ export const DonorInvitationsScreen = ({ donorId, onBack, onChat, onMyAppointmen
   const [loading, setLoading] = useState(true);
   const [responding, setResponding] = useState<string | null>(null);
   const [doneMsg, setDoneMsg] = useState<string | null>(null);
+  const [chatConvId, setChatConvId] = useState<Record<string, string>>({});
 
   const refresh = async () => {
     const invs = await getDonorInvitations(donorId);
     setInvitations(invs);
     setLoading(false);
+    for (const inv of invs) {
+      if (inv.status === "confirmed" && !chatConvId[inv.id]) {
+        const conv = await getConversationByRequestAndParticipants(inv.requestId, donorId, inv.hospitalId);
+        if (conv) setChatConvId((prev) => ({ ...prev, [inv.id]: conv.id }));
+      }
+    }
   };
 
   useEffect(() => {
@@ -29,11 +36,20 @@ export const DonorInvitationsScreen = ({ donorId, onBack, onChat, onMyAppointmen
     return () => clearInterval(iv);
   }, [donorId]);
 
-  const handleAccept = async (id: string) => {
-    setResponding(id);
-    const ok = await acceptInvitation(id);
+  const handleAccept = async (inv: Appointment) => {
+    setResponding(inv.id);
+    const ok = await acceptInvitation(inv.id);
     setResponding(null);
     if (ok) {
+      let conv = await getConversationByRequestAndParticipants(inv.requestId, donorId, inv.hospitalId);
+      if (!conv) {
+        const nowTime = new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
+        const cid = `CONV-${Date.now()}`;
+        await addConversation({ id: cid, participants: [donorId, inv.hospitalId], hospitalId: inv.hospitalId, hospitalName: inv.hospitalName, donorId, donorName: "", requestId: inv.requestId, lastMessage: "", lastMessageTime: "", unread: 0 });
+        await addMessage({ id: `MSG-${Date.now()}`, conversationId: cid, senderId: inv.hospitalId, text: `شما برای تاریخ ${inv.date} ساعت ${inv.time} دعوت شدید.`, timestamp: nowTime });
+        conv = { id: cid, participants: [donorId, inv.hospitalId], hospitalId: inv.hospitalId, hospitalName: inv.hospitalName, donorId, donorName: "", requestId: inv.requestId, lastMessage: "", lastMessageTime: "", unread: 0 };
+      }
+      setChatConvId((prev) => ({ ...prev, [inv.id]: conv!.id }));
       setDoneMsg("دعوتنامه با موفقیت تأیید شد. نوبت شما در «نوبت‌های من» ثبت شد.");
       refresh();
       setTimeout(() => setDoneMsg(null), 3000);
@@ -53,7 +69,6 @@ export const DonorInvitationsScreen = ({ donorId, onBack, onChat, onMyAppointmen
 
   return (
     <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-      <StatusBar />
       <div className="bg-white flex-shrink-0 px-5 pt-2 pb-4">
         <div className="flex items-center gap-3 mb-2">
           <button onClick={onBack} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -63,7 +78,7 @@ export const DonorInvitationsScreen = ({ donorId, onBack, onChat, onMyAppointmen
         </div>
         <p className="text-[11px] text-muted-foreground">بیمارستان‌ها می‌توانند از شما برای اهدای خون دعوت کنند.</p>
       </div>
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 pb-24">
         {doneMsg && (
           <div className="mb-4 bg-green-50 border border-green-200 rounded-2xl p-3">
             <div className="flex items-center gap-2 mb-2">
@@ -110,7 +125,7 @@ export const DonorInvitationsScreen = ({ donorId, onBack, onChat, onMyAppointmen
                   <span className="flex items-center gap-1"><Clock size={12} />{inv.time}</span>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => handleAccept(inv.id)} disabled={responding === inv.id}
+                  <button onClick={() => handleAccept(inv)} disabled={responding === inv.id}
                     className="flex-1 bg-primary text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-60">
                     {responding === inv.id ? <Loader size={14} className="animate-spin" /> : <Check size={15} />}
                     تأیید و پذیرش
@@ -119,10 +134,12 @@ export const DonorInvitationsScreen = ({ donorId, onBack, onChat, onMyAppointmen
                     className="flex-1 bg-red-50 text-red-600 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-60">
                     <X size={15} />رد دعوت
                   </button>
-                  <button onClick={() => onChat(inv.id)}
-                    className="w-10 h-10 bg-muted/60 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <MessageCircle size={17} className="text-muted-foreground" />
-                  </button>
+                  {chatConvId[inv.id] && (
+                    <button onClick={() => onChat(chatConvId[inv.id])}
+                      className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <MessageCircle size={17} className="text-primary" />
+                    </button>
+                  )}
                 </div>
                 {inv.initiator === "hospital" && (
                   <div className="mt-2 flex items-center gap-1.5 bg-blue-50 rounded-xl px-3 py-1.5">

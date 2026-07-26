@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { BloodBadge } from "../components/ui/BloodBadge";
 import { getAvailableDonors } from "../services/requestStore";
 import { canDonateTo } from "../lib/bloodCompatibility";
@@ -30,7 +29,6 @@ export const VolunteersListScreen = ({ onBack, onChat, onInvite }: Props) => {
 
   return (
     <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-      <StatusBar />
       <div className="bg-white flex-shrink-0">
         <div className="flex items-center gap-3 px-5 pt-2 pb-3">
           <button onClick={onBack} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center flex-shrink-0"><ArrowLeft size={19} className="text-foreground rotate-180" /></button>
@@ -50,7 +48,7 @@ export const VolunteersListScreen = ({ onBack, onChat, onInvite }: Props) => {
           </div>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto pb-6">
+      <div className="flex-1 overflow-y-auto pb-24">
         <div className="mx-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-foreground">داوطلبان آماده اهدا</h2>

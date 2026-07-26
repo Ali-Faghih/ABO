@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { formatBloodTypeHero } from "../lib/formatBloodType";
 import { parsePersianDate } from "../lib/persian-calendar";
 import { getActiveRequests } from "../services/requestStore";
 import { getRegistryHospitals } from "../services/registryDb";
 import { getListedHospitalIds } from "../services/hospitalListStore";
+import { getUserById } from "../services/authStorage";
 import type { DonorProfile } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import { MapPin, Bell, ChevronDown, Droplets, AlertCircle, Building2, Star, Calendar, Clock } from "lucide-react";
@@ -14,13 +14,18 @@ import { Mail } from "lucide-react";
 
 interface Props { donor: DonorProfile; city: string; onCityClick: () => void; onAction: (fn: () => void) => void; onBookRequest: (req: BloodRequest) => void; onMyAppointments: () => void; onNotifications: () => void; onInvitations: () => void }
 
-export const DonorHomeScreen = ({ donor, city, onCityClick, onAction, onBookRequest, onMyAppointments, onNotifications }: Props) => {
+export const DonorHomeScreen = ({ donor: initialDonor, city, onCityClick, onAction, onBookRequest, onMyAppointments, onNotifications, onInvitations }: Props) => {
   const { updateProfile } = useAuth();
+  const [donor, setDonor] = useState<DonorProfile>(initialDonor);
   const [allRequests, setAllRequests] = useState<any[]>([]);
   const [showAllCities, setShowAllCities] = useState(false);
   const [showAllHospitals, setShowAllHospitals] = useState(false);
   const requests = showAllCities ? allRequests : allRequests.filter((r) => r.city === city);
   const [timeLeft, setTimeLeft] = useState<{ months: number; days: number; hours: number } | null>(null);
+
+  useEffect(() => {
+    getUserById(initialDonor.id).then((fresh) => { if (fresh) { setDonor(fresh as DonorProfile); if (fresh.eligible !== initialDonor.eligible || (fresh as DonorProfile).nextEligible !== initialDonor.nextEligible) updateProfile(fresh); } });
+  }, []);
   useEffect(() => {
     if (donor.eligible || !donor.nextEligible) { setTimeLeft(null); return; }
     const tick = async () => {
@@ -67,7 +72,6 @@ export const DonorHomeScreen = ({ donor, city, onCityClick, onAction, onBookRequ
   return (
   <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
     <div className="bg-white flex-shrink-0">
-      <StatusBar />
       <div className="flex items-center justify-between px-5 pb-4">
         <div>
           <span className="text-xs text-muted-foreground">سلام،</span>

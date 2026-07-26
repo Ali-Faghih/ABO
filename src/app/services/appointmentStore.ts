@@ -11,8 +11,7 @@ export async function getAppointmentsByHospital(hospitalId: string): Promise<App
 
 export async function getAppointmentById(id: string): Promise<Appointment | null> {
   try {
-    const all = await api<Appointment[]>("GET", "/requests");
-    return all.find((a) => a.id === id) || null;
+    return await api<Appointment>("GET", `/requests/appointments/${id}`);
   } catch {
     return null;
   }

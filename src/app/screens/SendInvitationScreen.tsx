@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
+import { useState, useEffect } from "react";
 import { inviteDonor, TIME_SLOTS, getBookedTimeSlots } from "../services/appointmentStore";
 import { getActiveRequests } from "../services/requestStore";
 import { ArrowLeft, Send, Calendar, Clock, AlertCircle, CheckCircle, Loader, User } from "lucide-react";
@@ -25,13 +24,13 @@ export const SendInvitationScreen = ({ donorId, donorName, donorBloodType, hospi
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
 
-  useState(() => {
+  useEffect(() => {
     (async () => {
       const reqs = (await getActiveRequests()).filter((r: any) => r.hospitalId === hospitalId);
       setRequests(reqs);
       setLoading(false);
     })();
-  });
+  }, [hospitalId]);
 
   const handleDateChange = async (d: string) => {
     setDate(d);
@@ -68,7 +67,6 @@ export const SendInvitationScreen = ({ donorId, donorName, donorBloodType, hospi
   if (done) {
     return (
       <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-        <StatusBar />
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-border/20 text-center max-w-sm w-full">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -89,7 +87,6 @@ export const SendInvitationScreen = ({ donorId, donorName, donorBloodType, hospi
 
   return (
     <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-      <StatusBar />
       <div className="bg-white flex-shrink-0 px-5 pt-2 pb-4">
         <div className="flex items-center gap-3 mb-3">
           <button onClick={onBack} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -107,7 +104,7 @@ export const SendInvitationScreen = ({ donorId, donorName, donorBloodType, hospi
           </div>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 pb-24">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader size={24} className="animate-spin text-primary" />

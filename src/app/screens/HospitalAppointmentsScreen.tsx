@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { BloodBadge } from "../components/ui/BloodBadge";
 import { getAppointmentsByHospital, confirmAppointment, rejectAppointment, cancelAppointment, completeAppointment, getAppointmentById } from "../services/appointmentStore";
 import { getRequestById, updateRequest } from "../services/requestStore";
@@ -65,7 +64,7 @@ export const HospitalAppointmentsScreen = ({ onBack }: Props) => {
           const now = new Date();
           const next = new Date(now);
           next.setMonth(next.getMonth() + 3);
-          saveUser({
+          await saveUser({
             ...donor,
             donations: (donor.donations ?? 0) + 1,
             lastDonation: persianDateString(now),
@@ -79,7 +78,9 @@ export const HospitalAppointmentsScreen = ({ onBack }: Props) => {
           if (newMatched >= req.units) {
             await updateRequest(req.id, { matched: newMatched, status: "completed" });
             const allApts = await getAppointmentsByHospital(apt.hospitalId);
-            allApts.filter((a) => a.requestId === req.id && a.id !== apt.id && (a.status === "pending" || a.status === "confirmed")).forEach((a) => cancelAppointment(a.id));
+            await Promise.all(
+              allApts.filter((a) => a.requestId === req.id && a.id !== apt.id && (a.status === "pending" || a.status === "confirmed" || a.status === "invited")).map((a) => cancelAppointment(a.id))
+            );
           } else {
             await updateRequest(req.id, { matched: newMatched });
           }
@@ -100,14 +101,13 @@ export const HospitalAppointmentsScreen = ({ onBack }: Props) => {
 
   return (
     <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-      <StatusBar />
       <div className="bg-white flex-shrink-0">
         <div className="flex items-center gap-3 px-5 pt-2 pb-4">
           <button onClick={onBack} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center flex-shrink-0"><ArrowLeft size={19} className="text-foreground rotate-180" /></button>
           <h1 className="text-lg font-bold text-foreground">نوبت‌های دریافتی</h1>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto pb-6">
+      <div className="flex-1 overflow-y-auto pb-24">
         {appointments.length === 0 ? (
           <div className="mx-4 mt-6 bg-white rounded-2xl p-8 shadow-sm border border-border/20 text-center">
             <Calendar size={40} className="text-muted-foreground/40 mx-auto mb-3" />
