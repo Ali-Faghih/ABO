@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { getActiveRequests } from "../services/requestStore";
 import { Lock, MapPin, ChevronDown } from "lucide-react";
 
@@ -17,7 +16,6 @@ export const GuestHomeScreen = ({ city, onCityClick, onLogin, onAction }: { city
   return (
   <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
     <div className="bg-white flex-shrink-0">
-      <StatusBar />
       <div className="flex items-center justify-between px-5 pb-4">
         <div>
           <span className="text-xs text-muted-foreground">سلام،</span>

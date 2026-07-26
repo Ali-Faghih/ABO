@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
-import { StatusBar } from "../components/ui/StatusBar";
 import { Droplets, Heart, UserPlus, Building2, LogIn, Info, Eye } from "lucide-react";
 
 export const WelcomeScreen = () => {
@@ -18,9 +17,8 @@ export const WelcomeScreen = () => {
 
   return (
     <div className="flex flex-col h-full bg-white" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-      <StatusBar />
       <div className="flex-1 flex flex-col px-6 pb-6 overflow-y-auto">
-        <div className="flex items-center justify-center mt-8 mb-6">
+        <div className="flex items-center justify-center mt-16 mb-6">
           <div className="relative">
             <div className="w-24 h-24 bg-primary/8 rounded-[2rem] flex items-center justify-center">
               <Droplets size={50} className="text-primary" strokeWidth={1.5} />

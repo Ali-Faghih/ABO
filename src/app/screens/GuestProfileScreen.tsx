@@ -1,9 +1,7 @@
-import { StatusBar } from "../components/ui/StatusBar";
 import { User, LogIn, UserPlus, Info } from "lucide-react";
 
 export const GuestProfileScreen = ({ onLogin, onRegister }: { onLogin: () => void; onRegister: () => void }) => (
   <div className="flex flex-col h-full bg-[#F4F6FB]" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-    <div className="bg-white flex-shrink-0"><StatusBar /></div>
     <div className="flex-1 flex flex-col items-center justify-center px-8 pb-24 gap-5">
       <div className="w-24 h-24 bg-amber-50 rounded-full flex items-center justify-center">
         <User size={44} className="text-amber-400" />

@@ -114,7 +114,7 @@ export function AppLayout() {
       return <RegistryAdminScreen onBack={() => setSubScreen("none")} />;
     }
     if (subScreen === "volunteers-list") {
-      return <VolunteersListScreen onBack={() => setSubScreen("none")} onChat={async (donorId, donorName) => { const cid = `CONV-${Date.now()}`; if (user?.type === "hospital") { let conv = await getConversationByRequestAndParticipants("", donorId, user.username); if (!conv) { await addConversation({ id: cid, participants: [donorId, user.username], hospitalId: user.username, hospitalName: user.name, donorId, donorName, requestId: "", lastMessage: "", lastMessageTime: "", unread: 0 }); conv = { id: cid, participants: [donorId, user.username], hospitalId: user.username, hospitalName: user.name, donorId, donorName, requestId: "", lastMessage: "", lastMessageTime: "", unread: 0 }; } setSelectedChatId(conv.id); } setSubScreen("chat-detail"); }} onInvite={(donorId, donorName, bloodType) => { setInviteTarget({ donorId, donorName, bloodType }); setSubScreen("send-invitation"); }} />;
+      return <VolunteersListScreen onBack={() => setSubScreen("none")} onChat={async (donorId, donorName) => { if (user?.type === "hospital") { let conv = await getConversationByRequestAndParticipants("", donorId, user.username); if (!conv) { conv = await addConversation({ id: "", participants: [donorId, user.username], hospitalId: user.username, hospitalName: user.name, donorId, donorName, requestId: "", lastMessage: "", lastMessageTime: "", unread: 0 }); } setSelectedChatId(conv.id); } setSubScreen("chat-detail"); }} onInvite={(donorId, donorName, bloodType) => { setInviteTarget({ donorId, donorName, bloodType }); setSubScreen("send-invitation"); }} />;
     }
     if (subScreen === "send-invitation" && inviteTarget && user?.type === "hospital") {
       return <SendInvitationScreen donorId={inviteTarget.donorId} donorName={inviteTarget.donorName} donorBloodType={inviteTarget.bloodType} hospitalId={user.username} hospitalName={user.name} onBack={() => { setSubScreen("none"); setInviteTarget(null); }} />;
@@ -132,7 +132,7 @@ export function AppLayout() {
       return <HospitalAppointmentsScreen onBack={() => setSubScreen("none")} />;
     }
     if (subScreen === "notifications") {
-      return <NotificationsScreen onBack={() => setSubScreen("none")} />;
+      return <NotificationsScreen onBack={() => setSubScreen("none")} onNavigate={(screen, refId) => { if (refId && screen === "chat-detail") setSelectedChatId(refId); setSubScreen(screen as SubScreen); }} />;
     }
 
     switch (tab) {
@@ -165,10 +165,10 @@ export function AppLayout() {
     }
   };
 
-  const showBottomNav = tab !== "add" && subScreen === "none";
+  const showBottomNav = tab !== "add";
 
   return (
-    <div className="relative h-full overflow-hidden flex flex-col">
+    <div className="relative h-full min-h-full overflow-hidden flex flex-col">
       {isGuest && subScreen === "none" && tab !== "add" && (
         <GuestBanner onLogin={handleGuestPromptLogin} />
       )}
