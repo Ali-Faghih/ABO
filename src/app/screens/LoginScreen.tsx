@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
 import { findUserByUsername } from "../services/authStorage";
-import { StatusBar } from "../components/ui/StatusBar";
 import { ArrowLeft, Droplets, User, EyeOff, Eye, LogIn, AlertCircle, Shield, Info, Lock, Loader } from "lucide-react";
 import type { UserType } from "../types";
 
@@ -20,8 +19,12 @@ export const LoginScreen = () => {
   const [foundPassword, setFoundPassword] = useState<string | null>(null);
 
   const handleForgotLookup = async () => {
-    const user = await findUserByUsername(forgotUsername.trim());
-    setFoundPassword(user ? user.password : null);
+    try {
+      const res = await fetch("/api/auth/recover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: forgotUsername.trim(), type: activeType }) });
+      if (!res.ok) { setFoundPassword(null); return; }
+      const data = await res.json();
+      setFoundPassword(data.message || null);
+    } catch { setFoundPassword(null); }
   };
 
   const handleSubmit = async () => {
@@ -36,7 +39,6 @@ export const LoginScreen = () => {
 
   return (
     <div className="flex flex-col h-full bg-white" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-      <StatusBar />
       <div className="px-5 pt-3 pb-4 border-b border-border/30">
         <button onClick={handleBack} className="mb-4 w-9 h-9 flex items-center justify-center rounded-xl bg-muted/60">
           <ArrowLeft size={19} className="text-foreground rotate-180" />

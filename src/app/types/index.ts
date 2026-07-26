@@ -68,6 +68,7 @@ export interface DonorRegistrationData {
   height?: number;
   gender: "male" | "female";
   password: string;
+  birthDate?: string;
   diseaseName?: string;
   medicationName?: string;
 }
@@ -185,11 +186,13 @@ export interface Appointment {
 // ─── Notification Types (now embedded in Donor DB) ────────────────────────────
 export interface DonorNotification {
   id: string;
-  type: "appointment" | "request" | "system" | "reminder";
+  type: "appointment" | "request" | "system" | "reminder" | "message";
   title: string;
   message: string;
   time: string;
   read: boolean;
+  refType?: string;
+  refId?: string;
 }
 
 // ─── Magazine Types (new database) ────────────────────────────────────────────

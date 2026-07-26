@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
-import { StatusBar } from "../components/ui/StatusBar";
 import { StepIndicator } from "../components/ui/StepIndicator";
 import { HOSPITAL_TYPES } from "../data/constants";
 import { findHospitalInRegistry } from "../services/registryDb";
@@ -97,7 +96,6 @@ export const RegisterHospitalScreen = () => {
 
   const Header = ({ subtitle }: { subtitle: string }) => (
     <div className="bg-white border-b border-border/30 flex-shrink-0">
-      <StatusBar />
       <div className="flex items-center gap-3 px-5 pt-1 pb-4">
         <button onClick={step === 1 ? () => navigate("/") : () => setStep(s => s - 1)} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center flex-shrink-0">
           <ArrowLeft size={18} className="text-foreground rotate-180" />

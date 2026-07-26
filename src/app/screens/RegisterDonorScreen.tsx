@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
-import { StatusBar } from "../components/ui/StatusBar";
 import { StepIndicator } from "../components/ui/StepIndicator";
 import { BLOOD_TYPES, PROVINCES, getCitiesByProvince } from "../data/constants";
 import { findDonorInRegistry } from "../services/registryDb";
@@ -31,6 +30,10 @@ export const RegisterDonorScreen = () => {
   const [birthMonth, setBirthMonth] = useState("");
   const [birthDay, setBirthDay] = useState("");
   const [phone, setPhone] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(120);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [province, setProvince] = useState("تهران");
@@ -40,9 +43,6 @@ export const RegisterDonorScreen = () => {
   const [address, setAddress] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [password, setPassword] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
   const totalSteps = 4;
   const stepLabels = ["احراز هویت", "اطلاعات شخصی", "اطلاعات پزشکی", "رمز عبور"];
 
@@ -52,6 +52,26 @@ export const RegisterDonorScreen = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    if (!showOtpModal || otpTimer <= 0) return;
+    const iv = setInterval(() => setOtpTimer((t) => t - 1), 1000);
+    return () => clearInterval(iv);
+  }, [showOtpModal, otpTimer]);
+
+  const [otpError, setOtpError] = useState("");
+
+  const handleOtpSubmit = async () => {
+    if (otpCode.length !== 6) return;
+    try {
+      const res = await fetch("/api/auth/otp/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim(), code: otpCode }) });
+      if (!res.ok) { const data = await res.json(); setOtpError(data.error || "کد تأیید اشتباه است"); return; }
+      setOtpError("");
+      setOtpVerified(true);
+      setShowOtpModal(false);
+      setVerified(true);
+    } catch { setOtpError("خطا در اتصال به سرور"); }
+  };
+
   const handleVerify = async () => {
     if (!nationalId.trim() || nationalId.trim().length !== 10) {
       setRegisterError("لطفاً کد ملی ۱۰ رقمی را وارد کنید.");
@@ -59,6 +79,10 @@ export const RegisterDonorScreen = () => {
     }
     if (!birthYear || !birthMonth || !birthDay) {
       setRegisterError("لطفاً تاریخ تولد خود را کامل وارد کنید.");
+      return;
+    }
+    if (!phone.trim() || phone.trim().length < 11) {
+      setRegisterError("لطفاً شماره موبایل معتبر وارد کنید.");
       return;
     }
     const exists = await usernameExists(nationalId.trim());
@@ -73,11 +97,13 @@ export const RegisterDonorScreen = () => {
       return;
     }
     setRegisterError("");
-    setVerified(true);
     setFirstName(found.firstName);
     setLastName(found.lastName);
     setGender(found.gender || "male");
-    if (!phone) setPhone(found.phone || "");
+    setOtpTimer(120);
+    setOtpCode("");
+    setShowOtpModal(true);
+    fetch("/api/auth/otp/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) });
   };
 
   const handleComplete = async () => {
@@ -96,6 +122,7 @@ export const RegisterDonorScreen = () => {
       height,
       gender,
       password,
+      birthDate: `${birthYear}/${birthMonth}/${birthDay}`,
       diseaseName: hasDiseases ? diseaseName : undefined,
       medicationName: takesMeds ? medicationName : undefined,
     });
@@ -105,7 +132,6 @@ export const RegisterDonorScreen = () => {
 
   const Header = ({ title, subtitle }: { title: string; subtitle: string }) => (
     <div className="bg-white border-b border-border/30 flex-shrink-0">
-      <StatusBar />
       <div className="flex items-center gap-3 px-5 pt-1 pb-4">
         <button onClick={step === 1 ? () => navigate("/") : () => setStep(s => s - 1)} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center flex-shrink-0">
           <ArrowLeft size={18} className="text-foreground rotate-180" />
@@ -158,7 +184,7 @@ export const RegisterDonorScreen = () => {
                     <button onClick={() => setShowBirthCalendar(false)} className="text-xs text-muted-foreground font-semibold">بستن</button>
                   </div>
                   <div className="p-4">
-                    <PersianCalendar
+                    <PersianCalendar allowPast
                       selectedDate={birthYear ? `${birthYear}/${birthMonth}/${birthDay}` : ""}
                       onSelect={(date) => {
                         const parts = date.split("/");
@@ -172,6 +198,14 @@ export const RegisterDonorScreen = () => {
                 </div>
               </div>
             )}
+          </div>
+          <div>
+            <label className="text-xs font-bold text-foreground mb-2 block">شماره موبایل <span className="text-primary">*</span></label>
+            <div className="flex items-center gap-3 bg-muted/60 rounded-2xl px-4 py-3.5 border border-border">
+              <Phone size={16} className="text-muted-foreground flex-shrink-0" />
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09121234567" className="flex-1 bg-transparent text-sm outline-none" style={{ direction: "ltr", textAlign: "right" }} />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">برای دریافت کد تأیید</p>
           </div>
         </div>
         {registerError && (
@@ -190,6 +224,43 @@ export const RegisterDonorScreen = () => {
             <div>
               <p className="text-sm font-bold text-green-800">هویت تأیید شد</p>
               <p className="text-[11px] text-green-700">{firstName} {lastName} — کد ملی {nationalId}</p>
+            </div>
+          </div>
+        )}
+
+        {/* OTP bottom sheet modal */}
+        {showOtpModal && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
+            <div className="bg-white rounded-3xl rounded-b-none w-full max-w-[430px] p-6 animate-slide-up">
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-5" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-primary/8 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Shield size={18} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">کد تأیید</p>
+                  <p className="text-[11px] text-muted-foreground">کد ۶ رقمی به شماره <span className="font-bold" dir="ltr">{phone.slice(0, 4)}***{phone.slice(-3)}</span> ارسال شد</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-3 mb-4 relative" dir="ltr">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className={`w-10 h-12 rounded-xl border-2 flex items-center justify-center text-lg font-bold transition-all ${otpCode.length > i ? "border-primary bg-primary/5 text-foreground" : "border-border text-muted-foreground/30"}`}>
+                    {otpCode[i] || ""}
+                  </div>
+                ))}
+                <input ref={(el) => { if (el && showOtpModal && !el.matches(":focus")) setTimeout(() => el.focus(), 100); }} type="tel" inputMode="numeric" value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))} maxLength={6} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              </div>
+              <div className="flex items-center justify-center gap-1 mb-5">
+                <span className="text-sm font-bold text-primary">{String(Math.floor(otpTimer / 60)).padStart(2, "0")}:{String(otpTimer % 60).padStart(2, "0")}</span>
+                <span className="text-[11px] text-muted-foreground">مهلت وارد کردن کد</span>
+              </div>
+              {otpTimer <= 0 && (
+                <button onClick={() => { setOtpTimer(120); setOtpCode(""); setOtpError(""); fetch("/api/auth/otp/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) }); }} className="w-full bg-muted text-foreground py-3 rounded-2xl font-bold text-sm mb-2">ارسال مجدد کد</button>
+              )}
+              {otpError && <p className="text-[11px] text-red-500 text-center mb-2">{otpError}</p>}
+              <button onClick={handleOtpSubmit} disabled={otpCode.length !== 6} className={`w-full py-3.5 rounded-2xl font-bold text-sm ${otpCode.length === 6 ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-muted text-muted-foreground"}`}>
+                تأیید کد
+              </button>
             </div>
           </div>
         )}
@@ -248,13 +319,6 @@ export const RegisterDonorScreen = () => {
             <select value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-muted/60 rounded-2xl px-4 py-3.5 border border-border text-sm outline-none text-foreground appearance-none" style={{ direction: "rtl" }}>
               {getCitiesByProvince(province).map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-foreground mb-2 block">شماره موبایل <span className="text-primary">*</span></label>
-            <div className="flex items-center gap-3 bg-muted/60 rounded-2xl px-4 py-3.5 border border-border">
-              <Phone size={16} className="text-muted-foreground flex-shrink-0" />
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09121234567" className="flex-1 bg-transparent text-sm outline-none" style={{ direction: "ltr", textAlign: "right" }} />
-            </div>
           </div>
           <div>
             <label className="text-xs font-bold text-foreground mb-2 block">آدرس <span className="text-primary">*</span></label>
@@ -368,12 +432,22 @@ export const RegisterDonorScreen = () => {
               </button>
               <input type={showPass ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="حداقل ۸ کاراکتر" className="flex-1 bg-transparent text-sm outline-none" style={{ direction: "ltr", textAlign: "right" }} />
             </div>
-            <div className="flex gap-1 mt-2">
-              {[4, 3, 2, 1].map((level) => (
-                <div key={level} className={`flex-1 h-1 rounded-full ${password.length >= level * 2 ? "bg-primary" : "bg-muted"}`} />
-              ))}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1">قدرت رمز: {password.length < 4 ? "ضعیف" : password.length < 8 ? "متوسط" : "قوی"}</p>
+            {password.length > 0 && (() => {
+              const hasLower = /[a-z]/.test(password);
+              const hasUpper = /[A-Z]/.test(password);
+              const hasDigit = /\d/.test(password);
+              const hasSymbol = /[^a-zA-Z\d]/.test(password);
+              const onlyDigits = /^\d+$/.test(password);
+              let level: number, label: string, barColor: string, textColor: string;
+              if (onlyDigits) { level = 1; label = "خیلی ضعیف"; barColor = "bg-red-500"; textColor = "text-red-500"; }
+              else if (hasDigit && hasLower && hasUpper && hasSymbol) { level = 4; label = "قوی"; barColor = "bg-green-500"; textColor = "text-green-500"; }
+              else if (hasDigit && hasLower && hasUpper) { level = 3; label = "متوسط"; barColor = "bg-yellow-400"; textColor = "text-yellow-600"; }
+              else if (hasDigit && (hasLower || hasUpper)) { level = 2; label = "ضعیف"; barColor = "bg-orange-500"; textColor = "text-orange-500"; }
+              else { level = 1; label = "خیلی ضعیف"; barColor = "bg-red-500"; textColor = "text-red-500"; }
+              return (<><div className="flex gap-1 mt-2">
+                {[0, 1, 2, 3].map((i) => <div key={i} className={`flex-1 h-1.5 rounded-full transition-all ${i < level ? barColor : "bg-gray-200"}`} />)}
+              </div><p className={`text-[10px] mt-1 font-medium ${textColor}`}>قدرت رمز: {label}</p></>);
+            })()}
           </div>
           <div>
             <label className="text-xs font-bold text-foreground mb-2 block">تکرار رمز عبور <span className="text-primary">*</span></label>
@@ -382,18 +456,6 @@ export const RegisterDonorScreen = () => {
                 {showConfirmPass ? <EyeOff size={15} className="text-muted-foreground" /> : <Eye size={15} className="text-muted-foreground" />}
               </button>
               <input type={showConfirmPass ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className="flex-1 bg-transparent text-sm outline-none" style={{ direction: "ltr", textAlign: "right" }} />
-            </div>
-          </div>
-          <div className="bg-muted/60 rounded-2xl p-4">
-            <p className="text-xs font-bold text-foreground mb-1">تأیید شماره موبایل</p>
-            <p className="text-[11px] text-muted-foreground mb-3">{otpVerified ? "✓ شماره موبایل تأیید شد" : "یک کد ۶ رقمی به شماره موبایل شما ارسال می‌شود."}</p>
-            <div className="flex gap-2">
-              <button onClick={() => { setOtpSent(true); setOtpVerified(false); setOtpCode(""); }} disabled={otpSent && !otpVerified} className={`flex-1 py-2.5 rounded-xl text-xs font-bold ${otpVerified ? "bg-green-50 text-green-700" : "bg-secondary text-white"}`}>{otpVerified ? "✓ تأیید شد" : otpSent ? "ارسال مجدد" : "ارسال کد تأیید"}</button>
-              {!otpVerified && (
-                <div className="flex-1 bg-white rounded-xl border border-border px-3 py-2.5">
-                  <input type="text" value={otpCode} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 6); setOtpCode(v); if (v.length === 6 && otpSent) setOtpVerified(true); }} placeholder="کد ۶ رقمی" maxLength={6} className="w-full bg-transparent text-sm outline-none text-center tracking-widest placeholder:text-muted-foreground/50" />
-                </div>
-              )}
             </div>
           </div>
           <button onClick={() => setAcceptTerms(!acceptTerms)} className="flex items-start gap-3 text-right">
