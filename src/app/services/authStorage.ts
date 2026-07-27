@@ -1,4 +1,4 @@
-import { api, getToken, setToken, clearToken, getSessionUserId, setSession, clearSession } from "./api";
+import { api, setToken, getSessionUserId, setSession, clearSession } from "./api";
 import type { UserProfile, DonorProfile, HospitalProfile, DonorRegistrationData, HospitalRegistrationData } from "../types";
 
 const PASSWORD_KEY = "abo_pw";
@@ -101,8 +101,6 @@ export async function saveUser(user: UserProfile): Promise<void> {
       weight: user.weight,
       height: user.height,
       bloodType: user.bloodType,
-      eligible: user.eligible,
-      nextEligible: user.nextEligible || null,
       lastDonation: user.lastDonation || null,
       donations: user.donations,
       gender: user.gender,

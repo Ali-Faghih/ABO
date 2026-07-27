@@ -61,15 +61,10 @@ export const HospitalAppointmentsScreen = ({ onBack }: Props) => {
       if (apt) {
         const donor = await getUserById(apt.donorId) as DonorProfile | null;
         if (donor) {
-          const now = new Date();
-          const next = new Date(now);
-          next.setMonth(next.getMonth() + 3);
           await saveUser({
             ...donor,
             donations: (donor.donations ?? 0) + 1,
-            lastDonation: persianDateString(now),
-            nextEligible: persianDateString(next),
-            eligible: false,
+            lastDonation: persianDateString(new Date()),
           });
         }
         const req = await getRequestById(apt.requestId);

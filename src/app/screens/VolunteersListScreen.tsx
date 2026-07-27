@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { BloodBadge } from "../components/ui/BloodBadge";
 import { getAvailableDonors } from "../services/requestStore";
-import { canDonateTo } from "../lib/bloodCompatibility";
 import type { DonorReadiness } from "../types";
 import { ArrowLeft, User, MessageCircle, Search, MapPin, Filter, SendHorizonal } from "lucide-react";
 

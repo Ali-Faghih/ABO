@@ -21,6 +21,13 @@ router.get("/", (req, res) => {
   res.json(profiles);
 });
 
+router.get("/listed/ids", (req, res) => {
+  const db = getDb();
+  const rows = db.exec("SELECT hospitalId FROM hospital_profiles WHERE isListed=1");
+  const ids = rows.length ? rows[0].values.map((r: any) => r[0]) : [];
+  res.json(ids);
+});
+
 router.get("/:id", (req, res) => {
   const profile = getProfile(req.params.id);
   if (!profile) return res.status(404).json({ error: "not found" });
@@ -43,13 +50,6 @@ router.put("/:id", (req, res) => {
 });
 
 // ─── Listing ──────────────────────────────────────────────────────────────────
-
-router.get("/listed/ids", (req, res) => {
-  const db = getDb();
-  const rows = db.exec("SELECT hospitalId FROM hospital_profiles WHERE isListed=1");
-  const ids = rows.length ? rows[0].values.map((r: any) => r[0]) : [];
-  res.json(ids);
-});
 
 router.put("/:id/listing", (req, res) => {
   const { listed } = req.body;

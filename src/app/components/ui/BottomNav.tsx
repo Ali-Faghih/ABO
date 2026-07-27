@@ -10,7 +10,7 @@ export const BottomNav = ({ active, onChange }: { active: Tab; onChange: (t: Tab
     { id: "home", icon: Home, label: "خانه" },
   ];
   return (
-    <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-border/40 z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border/40 z-40">
       <div className="flex items-center justify-around px-2 pb-5 pt-2">
         {items.map((item) =>
           item.id === "add" ? (

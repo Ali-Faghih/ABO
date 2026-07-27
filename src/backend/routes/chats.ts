@@ -16,10 +16,24 @@ function mapConversation(row: any, cols: string[]) {
   return obj;
 }
 
+function enrichConversation(conv: any) {
+  try {
+    if (conv.hospitalId) {
+      const h = queryAll("SELECT name FROM hospital_profiles WHERE hospitalId=?", [conv.hospitalId]);
+      if (h.length && h[0].values.length) conv.hospitalName = h[0].values[0][0] as string;
+    }
+    if (conv.donorId) {
+      const d = queryAll("SELECT firstName, lastName FROM donor_profiles WHERE userId=?", [conv.donorId]);
+      if (d.length && d[0].values.length) conv.donorName = `${d[0].values[0][0]} ${d[0].values[0][1]}`;
+    }
+  } catch {}
+  return conv;
+}
+
 router.get("/", (req, res) => {
   const db = getDb();
   const rows = db.exec("SELECT * FROM conversations ORDER BY lastMessageTime DESC");
-  const convs = rows.length ? rows[0].values.map((r: any) => mapConversation(r, rows[0].columns)) : [];
+  const convs = rows.length ? rows[0].values.map((r: any) => enrichConversation(mapConversation(r, rows[0].columns))) : [];
   res.json(convs);
 });
 
@@ -29,7 +43,7 @@ router.get("/user/:userId", (req, res) => {
   const username = (usernameRow.length && usernameRow[0].values.length) ? usernameRow[0].values[0][0] as string : null;
   const params = username ? [req.params.userId, username, req.params.userId, username] : [req.params.userId, req.params.userId, req.params.userId, req.params.userId];
   const rows = queryAll("SELECT * FROM conversations WHERE hospitalId IN (?, ?) OR donorId IN (?, ?) ORDER BY lastMessageTime DESC", params);
-  const convs = rows.length ? rows[0].values.map((r: any) => mapConversation(r, rows[0].columns)) : [];
+  const convs = rows.length ? rows[0].values.map((r: any) => enrichConversation(mapConversation(r, rows[0].columns))) : [];
   res.json(convs);
 });
 
@@ -37,7 +51,7 @@ router.get("/:id", (req, res) => {
   const db = getDb();
   const rows = queryAll("SELECT * FROM conversations WHERE id=?", [req.params.id]);
   if (!rows.length || !rows[0].values.length) return res.status(404).json({ error: "not found" });
-  res.json(mapConversation(rows[0].values[0], rows[0].columns));
+  res.json(enrichConversation(mapConversation(rows[0].values[0], rows[0].columns)));
 });
 
 router.get("/:id/messages", (req, res) => {
@@ -57,7 +71,8 @@ router.post("/", (req, res) => {
   const db = getDb();
   db.run("INSERT INTO conversations VALUES (?,?,?,?,?,?,?)", [id, hospitalId, donorId, requestId || "", "", "", 0]);
   saveDb();
-  res.json({ id, hospitalId, donorId, requestId: requestId || "", lastMessage: "", lastMessageTime: "", unread: 0 });
+  const conv = queryAll("SELECT * FROM conversations WHERE id=?", [id]);
+  res.json(enrichConversation(mapConversation(conv[0].values[0], conv[0].columns)));
 });
 
 router.post("/:id/messages", (req, res) => {
@@ -74,8 +89,10 @@ router.post("/:id/messages", (req, res) => {
     const vals = conv[0].values[0];
     const convObj: any = {};
     cols.forEach((c: string, i: number) => { convObj[c] = vals[i]; });
-    const recipientId = senderId === convObj.hospitalId ? convObj.donorId : convObj.hospitalId;
-    const notifUserId = recipientId === convObj.hospitalId ? (getHospitalUserId(recipientId) || recipientId) : recipientId;
+    // Determine recipient: compare senderId against hospital's UUID (resolved from code)
+    const hospitalUserId = getHospitalUserId(convObj.hospitalId);
+    const isSenderHospital = senderId === hospitalUserId;
+    const notifUserId = isSenderHospital ? convObj.donorId : (hospitalUserId || convObj.hospitalId);
     const nid = `NOTIF-${notifUserId}-${Date.now()}`;
     const shortText = text.length > 80 ? text.slice(0, 80) + "..." : text;
     db.run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?)", [nid, notifUserId, "message", "پیام جدید", shortText, timestamp, 0, "conversation", req.params.id]);

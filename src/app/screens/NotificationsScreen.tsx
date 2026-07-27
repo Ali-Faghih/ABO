@@ -4,7 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { getNotifications, markAllAsRead, seedDonorNotifications } from "../services/notificationStore";
 import type { AppNotification } from "../services/notificationStore";
 import type { DonorProfile } from "../types";
-import { ArrowLeft, Bell, Clock, CheckCheck, CalendarDays, Heart, Info, AlertTriangle, CheckCircle2, MessageCircle, Mail, SendHorizonal } from "lucide-react";
+import { ArrowLeft, Bell, Clock, CheckCheck, CalendarDays, Heart, Info, CheckCircle2, MessageCircle, Mail, SendHorizonal } from "lucide-react";
 
 interface Props { onBack: () => void; onNavigate?: (screen: string, refId?: string) => void }
 
@@ -45,14 +45,14 @@ export const NotificationsScreen = ({ onBack, onNavigate }: Props) => {
       const target = parsePersianDate(donor.nextEligible!);
       if (!target) { setTimeLeft(null); return; }
       const diff = target.getTime() - Date.now();
-      if (diff <= 0) { setTimeLeft(null); updateProfile({ eligible: true, nextEligible: undefined }); return; }
+      if (diff <= 0) { setTimeLeft(null); return; }
       const totalHours = Math.floor(diff / (1000 * 60 * 60));
       setTimeLeft({ months: Math.floor(totalHours / (30 * 24)), days: Math.floor((totalHours % (30 * 24)) / 24), hours: totalHours % 24 });
     };
     tick();
     const iv = setInterval(tick, 60000);
     return () => clearInterval(iv);
-  }, [donor, donor?.eligible, donor?.nextEligible, updateProfile]);
+  }, [donor, donor?.eligible, donor?.nextEligible]);
 
   const handleMarkRead = async () => {
     if (!donor) return;

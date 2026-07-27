@@ -7,15 +7,28 @@ interface Props {
   onSelect: (date: string) => void;
   bookedDays?: string[];
   allowPast?: boolean;
+  minDate?: string;
 }
 
 const YEAR_RANGE = 80;
 
-export const PersianCalendar = ({ selectedDate, onSelect, bookedDays = [], allowPast = false }: Props) => {
+export const PersianCalendar = ({ selectedDate, onSelect, bookedDays = [], allowPast = false, minDate }: Props) => {
   const today = getPersianDate(new Date());
-  const [viewYear, setViewYear] = useState(today.year);
-  const [viewMonth, setViewMonth] = useState(today.month);
+  const minParsed = minDate ? (() => { const [y, m] = minDate.split("/").map(Number); return { year: y, month: m }; })() : null;
+  const initialMonth = minParsed && (minParsed.year > today.year || (minParsed.year === today.year && minParsed.month > today.month)) ? minParsed : today;
+  const [viewYear, setViewYear] = useState(initialMonth.year);
+  const [viewMonth, setViewMonth] = useState(initialMonth.month);
   const days = getMonthDays(viewYear, viewMonth);
+
+  const maxMonth = (() => {
+    if (allowPast) return null;
+    if (minDate) {
+      const [my, mm] = minDate.split("/").map(Number);
+      return { year: my, month: mm };
+    }
+    return { year: today.year, month: today.month };
+  })();
+  const atMax = maxMonth && viewYear >= maxMonth.year && viewMonth >= maxMonth.month;
 
   const prevMonth = () => { if (viewMonth === 1) { setViewYear(viewYear - 1); setViewMonth(12); } else { setViewMonth(viewMonth - 1); } };
   const nextMonth = () => { if (viewMonth === 12) { setViewYear(viewYear + 1); setViewMonth(1); } else { setViewMonth(viewMonth + 1); } };
@@ -32,6 +45,12 @@ export const PersianCalendar = ({ selectedDate, onSelect, bookedDays = [], allow
     if (y < today.year) return true;
     if (y === today.year && m < today.month) return true;
     if (y === today.year && m === today.month && day < today.day) return true;
+    if (minDate) {
+      const [my, mm, md] = minDate.split("/").map(Number);
+      if (y < my) return true;
+      if (y === my && m < mm) return true;
+      if (y === my && m === mm && day < md) return true;
+    }
     return false;
   };
 
@@ -49,7 +68,7 @@ export const PersianCalendar = ({ selectedDate, onSelect, bookedDays = [], allow
             {years.map((y) => <option key={y} value={y}>{toPersianNum(y)}</option>)}
           </select>
         </div>
-        <button onClick={nextMonth} className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${viewYear >= today.year && viewMonth >= today.month && !allowPast ? "opacity-30 cursor-not-allowed" : "bg-muted/60"}`} disabled={viewYear >= today.year && viewMonth >= today.month && !allowPast}><ChevronLeft size={16} className="text-foreground" /></button>
+        <button onClick={nextMonth} className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${atMax ? "opacity-30 cursor-not-allowed" : "bg-muted/60"}`} disabled={atMax}><ChevronLeft size={16} className="text-foreground" /></button>
       </div>
       <div className="grid grid-cols-7 gap-1 mb-2">
         {PERSIAN_DAYS.map((d) => (

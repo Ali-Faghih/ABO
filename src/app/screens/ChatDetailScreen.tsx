@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { getMessages, addMessage, getConversationById, updateConversation } from "../services/chatStore";
-import { ArrowLeft, Building2, User, Phone, Send, Calendar } from "lucide-react";
+import { ArrowLeft, Building2, User, Phone, Send } from "lucide-react";
 
 export const ChatDetailScreen = ({ conversationId, onBack }: { conversationId: string; onBack: () => void }) => {
   const { user } = useAuth();
@@ -34,13 +34,13 @@ export const ChatDetailScreen = ({ conversationId, onBack }: { conversationId: s
         <div className="flex items-center gap-3 px-4 pb-3">
           <button onClick={onBack} className="w-9 h-9 bg-muted/60 rounded-xl flex items-center justify-center flex-shrink-0"><ArrowLeft size={19} className="text-foreground rotate-180" /></button>
           <div className="w-10 h-10 bg-primary/8 rounded-full flex items-center justify-center flex-shrink-0">{partnerIcon}</div>
-          <div className="flex-1 text-right"><p className="text-sm font-bold text-foreground">{partnerName}</p><p className="text-[11px] text-green-500 font-medium">● آنلاین</p></div>
+          <div className="flex-1 text-right"><p className="text-sm font-bold text-foreground">{partnerName}</p><p className="text-[11px] text-muted-foreground font-medium">{isDonor ? "بیمارستان" : "اهداکننده"}</p></div>
           <button className="w-9 h-9 bg-muted/60 rounded-full flex items-center justify-center flex-shrink-0"><Phone size={16} className="text-foreground" /></button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 flex flex-col gap-3">
         {messages.map((message) => {
-          const isMe = message.senderId === user?.id;
+          const isMe = message.senderId === user?.id || message.senderId === user?.username;
           return (
             <div key={message.id} className={`flex ${isMe ? "justify-start" : "justify-end"}`}>
               <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl ${isMe ? "bg-primary text-white rounded-br-sm" : "bg-white text-foreground rounded-bl-sm shadow-sm border border-border/20"}`}>

@@ -7,7 +7,7 @@ import { getListedHospitalIds } from "../services/hospitalListStore";
 import { getUserById } from "../services/authStorage";
 import type { DonorProfile } from "../types";
 import { useAuth } from "../contexts/AuthContext";
-import { MapPin, Bell, ChevronDown, Droplets, AlertCircle, Building2, Star, Calendar, Clock } from "lucide-react";
+import { MapPin, Bell, ChevronDown, Droplets, Building2, Star, Calendar, Clock } from "lucide-react";
 import type { BloodRequest, RegistryHospital } from "../types";
 import { getDonorInvitations } from "../services/appointmentStore";
 import { Mail } from "lucide-react";
@@ -28,18 +28,18 @@ export const DonorHomeScreen = ({ donor: initialDonor, city, onCityClick, onActi
   }, []);
   useEffect(() => {
     if (donor.eligible || !donor.nextEligible) { setTimeLeft(null); return; }
-    const tick = async () => {
+    const tick = () => {
       const target = parsePersianDate(donor.nextEligible!);
       if (!target) { setTimeLeft(null); return; }
       const diff = target.getTime() - Date.now();
-      if (diff <= 0) { setTimeLeft(null); try { await updateProfile({ eligible: true, nextEligible: undefined }); } catch { /* ignore */ } return; }
+      if (diff <= 0) { setTimeLeft(null); return; }
       const totalHours = Math.floor(diff / (1000 * 60 * 60));
       setTimeLeft({ months: Math.floor(totalHours / (30 * 24)), days: Math.floor((totalHours % (30 * 24)) / 24), hours: totalHours % 24 });
     };
     tick();
     const iv = setInterval(tick, 60000);
     return () => clearInterval(iv);
-  }, [donor.eligible, donor.nextEligible, updateProfile]);
+  }, [donor.eligible, donor.nextEligible]);
   const [inviteCount, setInviteCount] = useState(0);
   useEffect(() => {
     const f = async () => {
@@ -103,19 +103,13 @@ export const DonorHomeScreen = ({ donor: initialDonor, city, onCityClick, onActi
             <div className="bg-white/20 rounded-2xl p-3"><Droplets size={30} className="text-white" strokeWidth={1.5} /></div>
           </div>
           <div className="flex items-center gap-3">
-            {[{ label: "اهداها", value: String(donor.donations) }, { label: "آخرین اهدا", value: donor.lastDonation ?? "—" }, { label: "وضعیت", value: donor.eligible ? "آماده" : "در انتظار", green: donor.eligible }].map((s) => (
+            {[{ label: "اهداها", value: String(donor.donations) }, { label: "آخرین اهدا", value: donor.lastDonation ?? "—" }, { label: !donor.eligible && timeLeft ? "تا اهدا بعدی" : "وضعیت", value: donor.eligible ? "آماده" : timeLeft ? `${timeLeft.days} روز` : "در انتظار", green: donor.eligible, amber: !donor.eligible }].map((s) => (
               <div key={s.label} className="bg-white/15 rounded-xl px-3 py-2 text-center flex-1">
                 <p className="text-white/60 text-[10px] mb-0.5">{s.label}</p>
-                <p className={`font-bold text-xs ${(s as any).green ? "text-green-300" : "text-white"}`}>{s.value}</p>
+                <p className={`font-bold text-xs ${(s as any).green ? "text-green-300" : (s as any).amber ? "text-amber-300" : "text-white"}`}>{s.value}</p>
               </div>
             ))}
           </div>
-          {timeLeft && (
-            <div className="mt-3 bg-white/10 rounded-xl px-3 py-2 text-center">
-              <p className="text-white/60 text-[10px] mb-1">زمان تا اهدای بعدی</p>
-              <p className="text-white font-bold text-sm">{timeLeft.months > 0 ? `${timeLeft.months} ماه ` : ""}{timeLeft.days} روز {timeLeft.hours} ساعت</p>
-            </div>
-          )}
         </div>
       </div>
       <div className="mx-4 mt-4">

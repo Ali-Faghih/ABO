@@ -138,9 +138,9 @@ export async function seedAll() {
   const DONOR_BLOOD = ["O+", "A+", "B-", "B+", "A-", "AB+", "O-", "O+"];
   const DONOR_WEIGHTS = [75, 65, 60, 72, 68, 80, 70, 63];
   const DONOR_HEIGHTS = [172, 165, 162, 170, 167, 180, 175, 160];
-  const DONOR_ELIGIBLE = [1, 1, 1, 1, 1, 1, 0, 1];
+  const DONOR_ELIGIBLE = [0, 1, 1, 1, 1, 1, 0, 1];
   const DONOR_READINESS = [1, 1, 1, 1, 1, 1, 1, 1];
-  const DONOR_SCORES = [3, 2, 1, 0, 0, 0, 0, 0];
+  const DONOR_SCORES = [1, 2, 1, 0, 0, 0, 0, 0];
 
   const DONOR_ADDRESSES = [
     "خیابان ولیعصر، تهران", "خیابان چهارباغ، اصفهان", "بلوار زند، شیراز",
@@ -162,7 +162,7 @@ export async function seedAll() {
       id, firstName, lastName, phone, "", gender, city, city,
       DONOR_ADDRESSES[i],
       DONOR_WEIGHTS[i], DONOR_HEIGHTS[i], bloodType, "", "", DONOR_READINESS[i], null, DONOR_ELIGIBLE[i],
-      i < 3 ? null : null, i < 3 ? null : null, today, DONOR_SCORES[i],
+      i === 0 ? "۲۷ شهریور ۱۴۰۵" : null, i === 0 ? "۲۷ خرداد ۱۴۰۵" : null, today, DONOR_SCORES[i],
     ]);
   });
 
@@ -220,7 +220,7 @@ export async function seedAll() {
   db.run("INSERT OR IGNORE INTO requests VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ["REQ-007", demoIds[1], regHospitals[1][1], "B+", 2, "فوری", "۱۴۰۵/۰۴/۲۰", "active", 0, "اصفهان", now, ""]);
 
   // ── Seed appointments ─────────────────────────────────────────────────────
-  db.run("INSERT OR IGNORE INTO appointments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ["APPT-001", "REQ-001", "seed-donor-001", "علی محمدی", firstHospId, firstHospName, "O-", "۱۴۰۵/۰۴/۱۴", "۰۹:۰۰", "confirmed", now, "donor"]);
+  db.run("INSERT OR IGNORE INTO appointments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ["APPT-001", "REQ-001", "seed-donor-001", "علی محمدی", firstHospId, firstHospName, "O-", "۱۴۰۵/۰۴/۱۴", "۰۹:۰۰", "cancelled", now, "system"]);
   db.run("INSERT OR IGNORE INTO appointments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ["APPT-002", "REQ-003", "seed-donor-002", "محمد حسینی", demoIds[2], regHospitals[2][1], "B+", "۱۴۰۵/۰۴/۱۵", "۱۰:۰۰", "pending", now, "donor"]);
   db.run("INSERT OR IGNORE INTO appointments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ["APPT-003", "REQ-006", "seed-donor-001", "علی محمدی", firstHospId, firstHospName, "AB+", "۱۴۰۵/۰۳/۲۷", "۱۱:۰۰", "completed", "۲۷ خرداد ۱۴۰۵", "donor"]);
   db.run("INSERT OR IGNORE INTO appointments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ["APPT-004", "REQ-007", "seed-donor-003", "امیر رضایی", demoIds[1], regHospitals[1][1], "B-", "۱۴۰۵/۰۴/۲۰", "۱۴:۰۰", "pending", now, "donor"]);

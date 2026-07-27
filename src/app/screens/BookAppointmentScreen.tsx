@@ -33,14 +33,6 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
   }, [selectedDate, request.hospitalId]);
 
   useEffect(() => {
-    if (!donor || donor.eligible || !donor.nextEligible) return;
-    const target = parsePersianDate(donor.nextEligible);
-    if (target && target.getTime() <= Date.now()) {
-      updateProfile({ eligible: true, nextEligible: undefined });
-    }
-  }, []);
-
-  useEffect(() => {
     if (step !== "done" || !selectedDate) return;
     if (!donor) return;
     (async () => { const conv = await getConversationByRequestAndParticipants(request.id, donor.id, request.hospitalId); if (conv) setConvId(conv.id); })();
@@ -67,11 +59,9 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
     ? "لطفا وارد حساب کاربری خود شوید"
     : !canDonateTo(donor.bloodType, request.bloodType)
       ? "گروه خونی شما با این درخواست مطابقت ندارد"
-      : !donor.eligible
-        ? `شما تا تاریخ ${donor.nextEligible ?? "نامشخص"} نمی‌توانید خون اهدا کنید`
-        : request.status !== "active" && request.status !== "matched"
-          ? "این درخواست دیگر فعال نیست"
-          : null;
+      : request.status !== "active" && request.status !== "matched"
+        ? "این درخواست دیگر فعال نیست"
+        : null;
 
   if (eligibilityError) return (
     <div className="flex flex-col h-full bg-white items-center justify-center gap-5 px-8" dir="rtl" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
@@ -165,12 +155,18 @@ export const BookAppointmentScreen = ({ request, onBack, onChat }: Props) => {
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3"><Building2 size={13} /><span>{request.urgency} • {request.units} واحد • مهلت: {request.deadline}</span></div>
           </div>
+          {donor && !donor.eligible && donor.nextEligible && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-4 flex items-center gap-2.5">
+              <TimerIcon size={16} className="text-amber-600 flex-shrink-0" />
+              <p className="text-xs text-amber-700 leading-relaxed">شما تا تاریخ <span className="font-bold">{donor.nextEligible}</span> امکان اهدا ندارید. تاریخ‌های قبل از این روز غیرفعال هستند.</p>
+            </div>
+          )}
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-3">
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${step === "calendar" ? "bg-primary text-white" : "bg-green-50 text-green-700"}`}><Calendar size={15} /></div>
               <span className={`text-sm font-bold ${step === "time" || step === "confirm" ? "text-green-700" : step === "calendar" ? "text-foreground" : "text-muted-foreground"}`}>انتخاب تاریخ</span>
             </div>
-            <PersianCalendar selectedDate={selectedDate} onSelect={(d) => { setSelectedDate(d); if (d) setStep("time"); }} />
+            <PersianCalendar selectedDate={selectedDate} onSelect={(d) => { setSelectedDate(d); if (d) setStep("time"); }} minDate={donor?.nextEligible} />
           </div>
           {selectedDate && (
             <div className="mb-4">

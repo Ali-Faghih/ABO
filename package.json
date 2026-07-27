@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite",
+    "dev": "vite --host",
     "server": "tsx src/backend/server.ts",
     "dev:all": "concurrently \"npm run server\" \"npm run dev\""
   },

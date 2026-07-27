@@ -115,13 +115,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [login]);
 
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
-    setUser((prev) => {
-      if (!prev) return prev;
-      const updated = { ...prev, ...updates } as UserProfile;
-      saveUser(updated);
-      return updated;
-    });
-  }, []);
+    const updated = { ...user, ...updates } as UserProfile;
+    setUser(updated);
+    await saveUser(updated);
+  }, [user]);
 
   const value = useMemo<AuthContextValue>(() => ({
     user,

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
-import { findUserByUsername } from "../services/authStorage";
 import { ArrowLeft, Droplets, User, EyeOff, Eye, LogIn, AlertCircle, Shield, Info, Lock, Loader } from "lucide-react";
 import type { UserType } from "../types";
 
@@ -16,7 +15,7 @@ export const LoginScreen = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotUsername, setForgotUsername] = useState("");
-  const [foundPassword, setFoundPassword] = useState<string | null>(null);
+  const [foundPassword, setFoundPassword] = useState<string | null | false>(false);
 
   const handleForgotLookup = async () => {
     try {
@@ -114,7 +113,7 @@ export const LoginScreen = () => {
             <p className="text-xs text-muted-foreground mb-4">{activeType === "donor" ? "کد ملی خود را وارد کنید." : "کد بیمارستان را وارد کنید."}</p>
             <input type="text" value={forgotUsername} onChange={(e) => setForgotUsername(e.target.value)} placeholder={activeType === "donor" ? "1532620591" : "TEH-202D"} className="w-full bg-muted/60 rounded-2xl px-4 py-3.5 border border-border text-sm outline-none text-center mb-4" style={{ direction: "ltr" }} />
             <button onClick={handleForgotLookup} disabled={!forgotUsername.trim()} className="w-full bg-primary text-white py-3 rounded-2xl text-sm font-bold mb-3">بازیابی رمز عبور</button>
-            {foundPassword !== null && (
+            {foundPassword !== false && (
               <div className={`rounded-2xl p-3 text-sm font-bold ${foundPassword ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
                 {foundPassword ? `رمز عبور شما: ${foundPassword}` : "کاربری با این مشخصات یافت نشد"}
               </div>

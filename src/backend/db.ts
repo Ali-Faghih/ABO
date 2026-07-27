@@ -110,8 +110,8 @@ export async function initDb() {
   db.run(`
     CREATE TABLE IF NOT EXISTS conversations (
       id TEXT PRIMARY KEY,
-      hospitalId TEXT NOT NULL REFERENCES users(id),
-      donorId TEXT NOT NULL REFERENCES users(id),
+      hospitalId TEXT NOT NULL,
+      donorId TEXT NOT NULL,
       requestId TEXT DEFAULT '',
       lastMessage TEXT DEFAULT '',
       lastMessageTime TEXT,
@@ -230,4 +230,72 @@ export function queryAll(sql: string, params: any[] = []): { columns: string[]; 
   }
   stmt.free();
   return [{ columns, values }];
+}
+
+function toJalali(gy: number, gm: number, gd: number): [number, number, number] {
+  const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  let gy2 = gm > 2 ? gy + 1 : gy;
+  let days = 355666 + 365 * gy + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+  let jy = -1595 + 33 * Math.floor(days / 12053);
+  days %= 12053;
+  jy += 4 * Math.floor(days / 1461);
+  days %= 1461;
+  if (days > 365) { jy += Math.floor((days - 1) / 365); days = (days - 1) % 365; }
+  const jm = days < 186 ? 1 + Math.floor(days / 31) : 7 + Math.floor((days - 186) / 30);
+  const jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
+  return [jy, jm, jd];
+}
+
+function toGregorian(jy: number, jm: number, jd: number): [number, number, number] {
+  const monthOffset = jm <= 6 ? (jm - 1) * 31 : (jm - 7) * 30 + 186;
+  const days = (jy - 1) * 365 + Math.floor((jy - 1) / 33) * 8 + Math.floor(((jy - 1) % 33 + 3) / 4) + monthOffset + jd - 1;
+  const REF_DAYS = 512070;
+  const REF_GREG = new Date(2024, 2, 20);
+  const result = new Date(REF_GREG.getTime() + (days - REF_DAYS) * 86400000);
+  return [result.getFullYear(), result.getMonth() + 1, result.getDate()];
+}
+
+function parseFaDate(s: string): Date | null {
+  const pe = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+  const en = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+  let t = s;
+  for (let i = 0; i < 10; i++) t = t.split(pe[i]).join(en[i]);
+  const parts = t.split("/");
+  if (parts.length === 3) {
+    const [jy, jm, jd] = parts.map(Number);
+    if (!isNaN(jy) && !isNaN(jm) && !isNaN(jd)) {
+      const [gy, gm, gd] = toGregorian(jy, jm, jd);
+      return new Date(gy, gm - 1, gd);
+    }
+  }
+  const monthMap: Record<string, number> = { "فروردین": 1, "اردیبهشت": 2, "خرداد": 3, "تیر": 4, "مرداد": 5, "شهریور": 6, "مهر": 7, "آبان": 8, "آذر": 9, "دی": 10, "بهمن": 11, "اسفند": 12 };
+  const textParts = t.split(/\s+/);
+  if (textParts.length >= 3) {
+    const day = parseInt(textParts[0]);
+    const month = monthMap[textParts[1]];
+    const year = parseInt(textParts[2]);
+    if (!isNaN(day) && month && !isNaN(year)) {
+      const [gy, gm, gd] = toGregorian(year, month, day);
+      return new Date(gy, gm - 1, gd);
+    }
+  }
+  return null;
+}
+
+function faDateStr(date: Date): string {
+  const [y, m, d] = toJalali(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  return `${y}/${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
+}
+
+const PERSIAN_MONTHS = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+
+export function computeEligibility(profile: { lastDonation?: string | null }): { eligible: boolean; nextEligible: string | null } {
+  if (!profile.lastDonation) return { eligible: true, nextEligible: null };
+  const last = parseFaDate(profile.lastDonation);
+  if (!last) return { eligible: true, nextEligible: null };
+  const next = new Date(last);
+  next.setMonth(next.getMonth() + 3);
+  if (next.getTime() <= Date.now()) return { eligible: true, nextEligible: null };
+  const [ny, nm, nd] = toJalali(next.getFullYear(), next.getMonth() + 1, next.getDate());
+  return { eligible: false, nextEligible: `${ny} ${PERSIAN_MONTHS[nm - 1]} ${nd}` };
 }

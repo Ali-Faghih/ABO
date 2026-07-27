@@ -165,7 +165,7 @@ export function AppLayout() {
     }
   };
 
-  const showBottomNav = tab !== "add";
+  const showBottomNav = tab !== "add" && subScreen === "none";
 
   return (
     <div className="relative h-full min-h-full overflow-hidden flex flex-col">

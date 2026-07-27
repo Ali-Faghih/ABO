@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "../components/ui/StatusBar";
 import { getRequestsByHospital, getAvailableDonors, updateRequest, cancelRequest } from "../services/requestStore";
 import { getAppointmentsByHospital, cancelAppointment } from "../services/appointmentStore";
 import { canDonateTo } from "../lib/bloodCompatibility";
@@ -82,7 +81,6 @@ export const HospitalHomeScreen = ({ hospital, onAddRequest, onAction, onAppoint
       </div>
     )}
     <div className="bg-white flex-shrink-0">
-      <StatusBar />
       <div className="flex items-center justify-between px-5 pb-4">
         <div>
           <span className="text-xs text-muted-foreground">پنل مدیریت</span>

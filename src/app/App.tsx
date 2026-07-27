@@ -9,7 +9,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="w-full min-h-screen overflow-hidden relative flex flex-col" style={{ fontFamily: "'Vazirmatn', sans-serif" }}>
-        <div className="w-full max-w-[430px] mx-auto min-h-screen overflow-hidden relative flex flex-col pt-4 frame">
+        <div className="w-full max-w-[430px] mx-auto h-screen overflow-hidden relative flex flex-col pt-4 frame">
           <Routes>
             <Route path="/" element={<WelcomeScreen />} />
             <Route path="/login" element={<LoginScreen />} />
@@ -26,6 +26,7 @@ export default function App() {
           .animate-slide-up { animation: slide-up 0.3s ease-out; }
           @media (min-width: 640px) {
             .frame {
+              transform: translateZ(0);
               border-radius: 24px;
               box-shadow:
                 0 0 0 1px rgba(122, 0, 25, 0.15),

@@ -70,11 +70,24 @@ export function parsePersianDate(persianStr: string): Date | null {
   let s = persianStr;
   for (let i = 0; i < 10; i++) s = s.split(pe[i]).join(en[i]);
   const parts = s.split("/");
-  if (parts.length !== 3) return null;
-  const [jy, jm, jd] = parts.map(Number);
-  if (isNaN(jy) || isNaN(jm) || isNaN(jd)) return null;
-  const [gy, gm, gd] = toGregorian(jy, jm, jd);
-  return new Date(gy, gm - 1, gd);
+  if (parts.length === 3) {
+    const [jy, jm, jd] = parts.map(Number);
+    if (isNaN(jy) || isNaN(jm) || isNaN(jd)) return null;
+    const [gy, gm, gd] = toGregorian(jy, jm, jd);
+    return new Date(gy, gm - 1, gd);
+  }
+  const monthMap: Record<string, number> = { "فروردین": 1, "اردیبهشت": 2, "خرداد": 3, "تیر": 4, "مرداد": 5, "شهریور": 6, "مهر": 7, "آبان": 8, "آذر": 9, "دی": 10, "بهمن": 11, "اسفند": 12 };
+  const textParts = s.split(/\s+/);
+  if (textParts.length >= 3) {
+    const day = parseInt(textParts[0]);
+    const month = monthMap[textParts[1]];
+    const year = parseInt(textParts[2]);
+    if (!isNaN(day) && month && !isNaN(year)) {
+      const [gy, gm, gd] = toGregorian(year, month, day);
+      return new Date(gy, gm - 1, gd);
+    }
+  }
+  return null;
 }
 
 const PERSIAN_DIGITS = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
